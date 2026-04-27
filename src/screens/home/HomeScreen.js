@@ -162,12 +162,12 @@ const HomeScreen = () => {
     });
 
     return () => {
-      unsubscribeStreak();
-      unsubscribeEconomy();
-      unsubscribeEnergy();
-      if (energyInterval) clearInterval(energyInterval);
+        unsubscribeStreak();
+        unsubscribeEconomy();
+        unsubscribeEnergy();
+        if (energyInterval) clearInterval(energyInterval);
     };
-  }, []);
+    }, []);
 
 
   return (
