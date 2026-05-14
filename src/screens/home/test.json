@@ -64,6 +64,29 @@
               }
             ]
           }
+          ,
+          {
+            "id": "u1_4",
+            "titulo": "Unidade 4: Orçamento Simplificado",
+            "licoes": [
+              {"tipo": "teoria_curta", "texto": "Orçamento é um mapa, não uma prisão. Simplifique em 3 categorias: fixos, variáveis e sonhos.", "pergunta": "Qual categoria costuma ser a mais difícil de estimar?"},
+              {"tipo": "escolha_multipla", "opcoes": [{"texto": "Fixos", "correta": false}, {"texto": "Variáveis", "correta": true}, {"texto": "Sonhos", "correta": false}]},
+              {"tipo": "pratica_real", "tarefa": "Anote seus gastos de ontem e classifique em uma das 3 categorias.", "recompensa_xp": 60},
+              {"tipo": "desafio_escolha", "contexto": "Você descobriu um gasto recorrente pequeno. O que fazer?", "pergunta": "Como reagir?", "opcoes": [{"texto": "Ignorar", "pontos": -10}, {"texto": "Cortar e redirecionar para poupança", "pontos": 40}]},
+              {"tipo": "compromisso_final", "texto": "Vou revisar meu orçamento mensalmente.", "acao": "Revisar orçamento"}
+            ]
+          },
+          {
+            "id": "u1_5",
+            "titulo": "Unidade 5: Hábitos que Valem Ouro",
+            "licoes": [
+              {"tipo": "teoria_curta", "texto": "Hábitos pequenos e repetidos geram resultados maiores que decisões esporádicas. O poder está na frequência.", "pergunta": "Qual hábito você pode manter por 30 dias?"},
+              {"tipo": "pratica_real", "tarefa": "Programe uma transferência automática de um valor simbólico para sua poupança esta semana.", "recompensa_xp": 80},
+              {"tipo": "escolha_multipla", "opcoes": [{"texto": "Esperar por motivação", "correta": false}, {"texto": "Implementar sistema que force hábito", "correta": true}]},
+              {"tipo": "reflexao_honesta", "texto": "Pequenas ações acumulam segurança. O que te impede de começar hoje?", "pergunta": "Liste uma barreira e uma solução", "campo_texto": true},
+              {"tipo": "compromisso_final", "texto": "Vou executar o hábito por 30 dias seguidos.", "acao": "Iniciar hábito"}
+            ]
+          }
         ]
       },
       {
@@ -79,6 +102,30 @@
                 "texto": "Muitas compras servem para provar algo a quem não se importa.",
                 "pergunta": "Qual objeto você comprou apenas para 'estar no nível' dos outros?",
                 "campo_texto": true
+              },
+              {
+                "tipo": "teoria_curta",
+                "texto": "Comparação constante transforma referência em prisão. Quando você mede a própria vida pelo ritmo dos outros, o que era decisão financeira vira reação emocional e o dinheiro passa a ser usado para aliviar insegurança, não para construir futuro.",
+                "pergunta": "Em que momento você percebe que está comprando para impressionar e não para resolver uma necessidade real?"
+              },
+              {
+                "tipo": "escolha_multipla",
+                "texto": "Você viu um amigo postar uma compra nova e, em seguida, sentiu vontade de trocar algo seu que ainda funciona bem. O melhor sinal de blindagem mental é:",
+                "opcoes": [
+                  {"texto": "Comprar algo parecido para não ficar para trás", "correta": false},
+                  {"texto": "Esperar 24 horas e revisar o motivo da vontade", "correta": true},
+                  {"texto": "Parcelar sem pensar para decidir depois", "correta": false}
+                ]
+              },
+              {
+                "tipo": "pratica_real",
+                "tarefa": "Hoje, abra suas redes sociais e identifique três perfis, anúncios ou gatilhos que estimulam compra por comparação. Anote quais deles ativam vontade de ostentar e silencie pelo menos um deles por uma semana.",
+                "recompensa_xp": 90
+              },
+              {
+                "tipo": "compromisso_final",
+                "texto": "Blindagem mental começa quando você para de terceirizar sua autoestima para objetos, marcas e aparência. A partir de agora, sua régua será utilidade, paz e coerência com seus objetivos.",
+                "acao": "Desligar a comparação"
               }
             ]
           },
@@ -93,6 +140,66 @@
                   {"texto": "Mais alegria", "correta": false},
                   {"texto": "Eterna insatisfação", "correta": true}
                 ]
+              },
+              {
+                "tipo": "teoria_curta",
+                "texto": "Quando a expectativa cresce mais rápido que a realidade, a sensação de falta nunca termina. A pessoa até melhora de vida, mas continua se sentindo atrasada porque sempre cria um novo padrão para alcançar. Felicidade sustentável depende de ajustar desejo, contexto e limite.",
+                "pergunta": "O que acontece com sua paz quando você aumenta o padrão de consumo sempre que a renda sobe?"
+              },
+              {
+                "tipo": "arrastar_classificar",
+                "pergunta": "Separe o que alimenta felicidade duradoura do que oferece alívio momentâneo",
+                "itens": [
+                  {"id": 1, "texto": "Dormir bem e manter rotina", "categoria": "duradoura"},
+                  {"id": 2, "texto": "Comprar por impulso após um dia ruim", "categoria": "momentanea"},
+                  {"id": 3, "texto": "Conversar com alguém de confiança", "categoria": "duradoura"},
+                  {"id": 4, "texto": "Trocar de celular sem necessidade", "categoria": "momentanea"},
+                  {"id": 5, "texto": "Guardar parte da renda para metas reais", "categoria": "duradoura"},
+                  {"id": 6, "texto": "Usar o cartão para escapar do estresse", "categoria": "momentanea"}
+                ],
+                "categorias": ["duradoura", "momentanea"],
+                "recompensa_xp": 120
+              },
+              {
+                "tipo": "pratica_real",
+                "tarefa": "Escreva três coisas que aumentam sua sensação de bem-estar sem exigir compra imediata: sono, tempo livre, conversa, caminhada, organização ou estudo. Depois escolha uma delas para praticar hoje por 20 minutos.",
+                "recompensa_xp": 100
+              },
+              {
+                "tipo": "reflexao_honesta",
+                "texto": "Nem todo aumento de salário melhora a vida se ele vier acompanhado de mais cobrança, mais dívidas e mais ansiedade. Às vezes, a verdadeira evolução é ganhar o suficiente para viver com calma, não para sustentar uma imagem.",
+                "pergunta": "Se sua renda dobrasse amanhã, o que você mudaria primeiro: o estilo de vida ou a paz mental?",
+                "campo_texto": true
+              }
+              ,
+              {
+                "tipo": "calculo_gamificado",
+                "texto": "Sua expectativa aumenta 20% após um aumento, mas sua realidade financeira melhora apenas 10% (por conta de novos gastos). Qual é a consequência psicológica mais provável?",
+                "opcoes": [
+                  {"texto": "Aumento de paz e satisfação", "correta": false, "pontos": 0},
+                  {"texto": "Melhora moderada, sem mudança na satisfação", "correta": false, "pontos": 10},
+                  {"texto": "Sensação contínua de insuficiência (hedonic treadmill)", "correta": true, "pontos": 50}
+                ]
+              },
+              {
+                "tipo": "escolha_multipla",
+                "texto": "Qual termo descreve o fenômeno de se acostumar rapidamente a novas posses e desejar constantemente mais?",
+                "opcoes": [
+                  {"texto": "Efeito manada", "correta": false},
+                  {"texto": "Hedonic treadmill", "correta": true},
+                  {"texto": "Lei da oferta e demanda", "correta": false}
+                ],
+                "feedback_vitoria": "Correto — o 'hedonic treadmill' explica porque elevamos continuamente nossas expectativas."
+              },
+              {
+                "tipo": "desafio_escolha",
+                "contexto": "Você recebeu R$500 extras e está tentado a elevar seu padrão de consumo imediatamente.",
+                "pergunta": "Qual alternativa ajuda mais a reduzir a diferença entre expectativa e realidade no longo prazo?",
+                "opcoes": [
+                  {"texto": "Gastar tudo em algo que aumenta status momentâneo", "pontos": -20},
+                  {"texto": "Investir parte em hábito que melhora bem-estar (curso, terapia, saúde)", "pontos": 80},
+                  {"texto": "Guardar sem plano definido", "pontos": 10}
+                ]
               }
             ]
           },
@@ -104,7 +211,54 @@
                 "tipo": "pratica_real",
                 "tarefa": "Escreva o valor que tornaria sua vida confortável, sem excessos ostentativos.",
                 "recompensa_xp": 150
+              },
+              {
+                "tipo": "teoria_curta",
+                "texto": "Definir o próprio 'basta' é escolher um limite que protege seu dinheiro e sua mente. Quem nunca define esse ponto continua aumentando o padrão de consumo sem perceber, porque cada conquista vira apenas um degrau para um gasto maior.",
+                "pergunta": "Como saber se você está subindo de vida ou só inflando o padrão para parecer bem-sucedido?"
+              },
+              {
+                "tipo": "escolha_multipla",
+                "texto": "Você recebeu um aumento, mas sua vida já estava funcional e tranquila. O passo mais saudável para evitar a inflação do estilo de vida é:",
+                "opcoes": [
+                  {"texto": "Aumentar tudo imediatamente para sentir que valeu a pena", "correta": false},
+                  {"texto": "Separar uma parte para futuro e revisar seus gastos com calma", "correta": true},
+                  {"texto": "Gastar o excedente inteiro para não parecer diferente", "correta": false}
+                ]
+              },
+              {
+                "tipo": "pratica_real",
+                "tarefa": "Defina agora três números pessoais: o mínimo que você precisa para viver, o valor confortável e o valor excessivo que você não quer transformar em hábito. Escreva esses três limites no papel e compare com sua realidade atual.",
+                "recompensa_xp": 130
+              },
+              {
+                "tipo": "compromisso_final",
+                "texto": "Quando você sabe onde é o suficiente, suas escolhas ficam mais leves e o dinheiro ganha direção. Seu próximo passo é respeitar esse limite com consistência, mesmo quando o ambiente tentar empurrar você para mais consumo.",
+                "acao": "Assumir meu basta"
               }
+            ]
+          }
+          ,
+          {
+            "id": "u2_4",
+            "titulo": "Unidade 4: Práticas de Autocontrole",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Autocontrole é um músculo; exercite com pequenas restrições financeiras antes de grandes decisões.","pergunta":"Qual pequena restrição você pode testar esta semana?"},
+              {"tipo":"pratica_real","tarefa":"Não use cartão de crédito por 7 dias e anote as tentações que aparecerem.","recompensa_xp":80},
+              {"tipo":"escolha_multipla","texto":"Escolha uma técnica para frear compras impulsivas:","opcoes":[{"texto":"Esperar 24h","correta":true},{"texto":"Parcelar e decidir depois","correta":false}]},
+              {"tipo":"desafio_escolha","contexto":"Você encontra uma promoção muito atrativa, mas não planejou a compra.","pergunta":"O que fazer?","opcoes":[{"texto":"Comprar agora","pontos":-10},{"texto":"Esperar 24h e reavaliar","pontos":40}]},
+              {"tipo":"compromisso_final","texto":"Vou aplicar a técnica das 24 horas antes de compras não planejadas.","acao":"Testar 24h"}
+            ]
+          },
+          {
+            "id": "u2_5",
+            "titulo": "Unidade 5: Comunidade e Influências",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Ambiente e companhia influenciam escolhas financeiras. Cercar-se de quem pensa a longo prazo ajuda.","pergunta":"Quem na sua vida influencia mais suas compras?"},
+              {"tipo":"arrastar_classificar","pergunta":"Identifique influências positivas e negativas","itens":[{"id":1,"texto":"Amigo que investe regularmente","categoria":"positivo"},{"id":2,"texto":"Perfis de ostentação","categoria":"negativo"}],"categorias":["positivo","negativo"],"recompensa_xp":100},
+              {"tipo":"pratica_real","tarefa":"Converse com uma pessoa que admira sobre objetivos financeiros e anote um conselho prático.","recompensa_xp":70},
+              {"tipo":"reflexao_honesta","texto":"Quem você segue virtualmente está moldando seus desejos. Faça uma limpeza consciente.","pergunta":"Quais 3 perfis você pode silenciar?","campo_texto":true},
+              {"tipo":"compromisso_final","texto":"Vou ajustar meu ambiente digital para reduzir gatilhos de consumo.","acao":"Limpar feed"}
             ]
           }
         ]
@@ -155,6 +309,29 @@
                 "texto": "Parabéns! Você concluiu a iniciação. Qual será sua nova regra inviolável?",
                 "acao": "Continuar"
               }
+            ]
+          }
+          ,
+          {
+            "id": "u3_4",
+            "titulo": "Unidade 4: Prioridades de Tempo vs Dinheiro",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Tempo e dinheiro são recursos limitados. Entender trocas entre eles evita decisões ruins.","pergunta":"O que você costuma trocar por tempo?"},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Dinheiro por conveniência","correta":true},{"texto":"Tempo por lazer","correta":false}]},
+              {"tipo":"pratica_real","tarefa":"Calcule quanto tempo você gasta por semana em atividades não essenciais.","recompensa_xp":90},
+              {"tipo":"desafio_escolha","contexto":"Você pode economizar 2 horas por semana ou R$50 por mês. Qual prefere?","pergunta":"Escolha:","opcoes":[{"texto":"Tempo","pontos":50},{"texto":"Dinheiro","pontos":10}]},
+              {"tipo":"compromisso_final","texto":"Vou proteger uma hora semanal para cuidar de planejamento financeiro.","acao":"Proteger tempo"}
+            ]
+          },
+          {
+            "id": "u3_5",
+            "titulo": "Unidade 5: Pequenas Renúncias, Grandes Ganhos",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Renúncias conscientes criam margem para oportunidades. Aprenda a renunciar sem sofrimento.","pergunta":"Qual gasto pequeno você pode reduzir esta semana?"},
+              {"tipo":"pratica_real","tarefa":"Substitua um delivery por uma refeição caseira esta semana e registre a economia.","recompensa_xp":70},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Renunciar tudo","correta":false},{"texto":"Renunciar conscientemente","correta":true}]},
+              {"tipo":"reflexao_honesta","texto":"Renúncia não é privação eterna; é escolha por algo maior no futuro.","pergunta":"O que você quer conquistar com essa renúncia?","campo_texto":true},
+              {"tipo":"compromisso_final","texto":"Vou aplicar uma renúncia consciente por 30 dias.","acao":"Iniciar renúncia"}
             ]
           }
         ]
@@ -222,6 +399,29 @@
               }
             ]
           }
+          ,
+          {
+            "id": "u4_4",
+            "titulo": "Unidade 4: Risco vs Retorno",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Todo investimento envolve risco. Entender o seu perfil ajuda a dormir melhor à noite.","pergunta":"Você prefere segurança ou crescimento agressivo?"},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Segurança","correta":false},{"texto":"Equilíbrio","correta":true},{"texto":"Risco alto","correta":false}]},
+              {"tipo":"calculo_gamificado","texto":"Se um ativo rende 1% ao mês, quanto rende em 12 meses sem considerar juros compostos?","opcoes":[{"texto":"12%","correta":true,"pontos":50},{"texto":"13%","correta":false,"pontos":10}]},
+              {"tipo":"pratica_real","tarefa":"Liste três investimentos compatíveis com seu perfil e pesquise taxas e liquidez.","recompensa_xp":120},
+              {"tipo":"compromisso_final","texto":"Vou escolher um investimento compatível com meu perfil este mês.","acao":"Escolher investimento"}
+            ]
+          },
+          {
+            "id": "u4_5",
+            "titulo": "Unidade 5: Diversificação Prática",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Diversificar reduz risco concentrado. Não coloque todos os ovos na mesma cesta.","pergunta":"O que seria uma diversificação simples para você?"},
+              {"tipo":"arrastar_classificar","pergunta":"Classifique ativos por liquidez","itens":[{"id":1,"texto":"Poupança","categoria":"alta"},{"id":2,"texto":"Imóvel","categoria":"baixa"}],"categorias":["alta","baixa"],"recompensa_xp":140},
+              {"tipo":"pratica_real","tarefa":"Abra uma planilha simples e distribua hipoteticamente R$10.000 entre 3 classes de ativos.","recompensa_xp":100},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Concentrar em um ativo","correta":false},{"texto":"Distribuir entre classes","correta":true}]},
+              {"tipo":"compromisso_final","texto":"Vou revisar minha alocação anualmente.","acao":"Revisar alocação"}
+            ]
+          }
         ]
       },
       {
@@ -283,6 +483,29 @@
                   {"texto": "R$ 900", "correta": false, "pontos": 10}
                 ]
               }
+            ]
+          }
+          ,
+          {
+            "id": "u5_4",
+            "titulo": "Unidade 4: Educação Financeira Prática",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Educar-se é multiplicar escolhas. Investir em conhecimento paga juros ao longo da vida.","pergunta":"Qual tema financeiro você quer dominar?"},
+              {"tipo":"pratica_real","tarefa":"Assista a um artigo ou vídeo curto sobre investimentos básicos e anote 3 aprendizados.","recompensa_xp":90},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Ignorar educação","correta":false},{"texto":"Estudar 1 vez por semana","correta":true}]},
+              {"tipo":"arrastar_classificar","pergunta":"Classifique ferramentas por utilidade para iniciantes","itens":[{"id":1,"texto":"Planilha de orçamento","categoria":"alta"},{"id":2,"texto":"Trading avançado","categoria":"baixa"}],"categorias":["alta","baixa"],"recompensa_xp":110},
+              {"tipo":"compromisso_final","texto":"Vou aprender um tópico financeiro por mês.","acao":"Aprender mensal"}
+            ]
+          },
+          {
+            "id": "u5_5",
+            "titulo": "Unidade 5: Ferramentas e Automatizações",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Automatizar poupança e pagamentos reduz atrito e aumenta consistência.","pergunta":"Que automação você pode configurar hoje?"},
+              {"tipo":"pratica_real","tarefa":"Programe uma transferência automática de 5% para poupança.","recompensa_xp":100},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Deixar manual","correta":false},{"texto":"Automatizar","correta":true}]},
+              {"tipo":"desafio_escolha","contexto":"Você quer poupar sem pensar. Qual ferramenta usar?","pergunta":"Escolha:","opcoes":[{"texto":"Transferência automática","pontos":80},{"texto":"Lembrar manualmente","pontos":10}]},
+              {"tipo":"compromisso_final","texto":"Vou automatizar pelo menos uma transferência este mês.","acao":"Automatizar"}
             ]
           }
         ]
@@ -351,6 +574,28 @@
                 "acao": "Vou começar meu caminho!"
               }
             ]
+          },
+          {
+            "id": "u6_4",
+            "titulo": "Unidade 4: Produtos Simples para Começar",
+            "licoes": [
+              {"tipo": "teoria_curta", "texto": "Existem produtos simples e acessíveis para começar a investir sem complicação.", "pergunta": "Qual opção parece mais viável para você?"},
+              {"tipo": "escolha_multipla", "opcoes": [{"texto": "Tesouro direto", "correta": true}, {"texto": "Operar day trade imediatamente", "correta": false}]},
+              {"tipo": "pratica_real", "tarefa": "Abra uma conta em uma corretora confiável e explore opções de baixo risco.", "recompensa_xp": 120},
+              {"tipo": "arrastar_classificar", "pergunta": "Classifique investimentos por risco", "itens": [{"id": 1, "texto": "Poupança", "categoria": "baixo"}, {"id": 2, "texto": "Ações individuais", "categoria": "alto"}], "categorias": ["baixo", "alto"], "recompensa_xp": 130},
+              {"tipo": "compromisso_final", "texto": "Vou iniciar um investimento piloto este mês.", "acao": "Investir piloto"}
+            ]
+          },
+          {
+            "id": "u6_5",
+            "titulo": "Unidade 5: Reinvestir e Crescer",
+            "licoes": [
+              {"tipo": "teoria_curta", "texto": "Reinvestir rendimentos acelera crescimento graças aos juros compostos.", "pergunta": "O que você fará com os primeiros rendimentos?"},
+              {"tipo": "calculo_gamificado", "texto": "Se você reinveste R$100 por mês com 0.5% ao mês, quanto terá em 12 meses (aprox.)?", "opcoes": [{"texto": "~R$1.200", "correta": false}, {"texto": "Um pouco acima de R$1.200", "correta": true, "pontos": 80}]},
+              {"tipo": "pratica_real", "tarefa": "Defina se seus rendimentos serão reinvestidos automaticamente.", "recompensa_xp": 90},
+              {"tipo": "escolha_multipla", "opcoes": [{"texto": "Gastar rendimentos", "correta": false}, {"texto": "Reinvestir", "correta": true}]},
+              {"tipo": "compromisso_final", "texto": "Vou reinvestir automaticamente os rendimentos.", "acao": "Reinvestir"}
+            ]
           }
         ]
       },
@@ -417,6 +662,28 @@
                 ]
               }
             ]
+          },
+          {
+            "id": "u7_4",
+            "titulo": "Unidade 4: Negociação de Dívidas",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Negociar pode reduzir juros e parcelas. Saiba quando pedir desconto ou parcelamento estendido.","pergunta":"Qual documento levar ao negociar?"},
+              {"tipo":"pratica_real","tarefa":"Anote suas dívidas e taxas; ligue para um credor e peça simulação de negociação.","recompensa_xp":140},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Ignorar credor","correta":false},{"texto":"Negociar com dados em mãos","correta":true}]},
+              {"tipo":"desafio_escolha","contexto":"Você recebeu uma proposta de parcelamento com juros menores. Aceitar?","pergunta":"Decisão:","opcoes":[{"texto":"Aceitar sem comparar","pontos":-10},{"texto":"Comparar alternativas e escolher melhor","pontos":50}]},
+              {"tipo":"compromisso_final","texto":"Vou negociar ao menos uma dívida até o fim do mês.","acao":"Negociar dívida"}
+            ]
+          },
+          {
+            "id": "u7_5",
+            "titulo": "Unidade 5: Proteções e Seguros",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Seguros e proteções são ferramentas que evitam que imprevistos quebrem seu plano financeiro.","pergunta":"Qual proteção faz sentido para você?"},
+              {"tipo":"arrastar_classificar","pergunta":"Classifique prioridades de proteção","itens":[{"id":1,"texto":"Seguro saúde","categoria":"alto"},{"id":2,"texto":"Garantia estendida de TV","categoria":"baixo"}],"categorias":["alto","baixo"],"recompensa_xp":130},
+              {"tipo":"pratica_real","tarefa":"Pesquise uma proteção acessível que reduza risco financeiro pessoal.","recompensa_xp":100},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Ignorar proteções","correta":false},{"texto":"Avaliar custo-benefício","correta":true}]},
+              {"tipo":"compromisso_final","texto":"Vou proteger ao menos um risco importante este ano.","acao":"Contratar proteção"}
+            ]
           }
         ]
       },
@@ -476,6 +743,28 @@
                 "texto": "Você agora entende os princípios. O caminho é seu. Que comece a jornada rumo à liberdade!",
                 "acao": "Começar minha jornada"
               }
+            ]
+          },
+          {
+            "id": "u8_4",
+            "titulo": "Unidade 4: Metas e Cronogramas",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Metas claras com prazos realistas tornam possível medir progresso e ajustar rotas.","pergunta":"Qual meta financeira você quer alcançar em 1 ano?"},
+              {"tipo":"pratica_real","tarefa":"Defina uma meta SMART (específica, mensurável, atingível, relevante, temporal).", "recompensa_xp":160},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Metas vagas","correta":false},{"texto":"Metas SMART","correta":true}]},
+              {"tipo":"desafio_escolha","contexto":"Você tem 12 meses para juntar uma reserva. Como planejar?","pergunta":"Escolha: ","opcoes":[{"texto":"Sem plano","pontos":-20},{"texto":"Aporte mensal consistente","pontos":80}]},
+              {"tipo":"compromisso_final","texto":"Vou criar um cronograma mensal para minha meta.","acao":"Criar cronograma"}
+            ]
+          },
+          {
+            "id": "u8_5",
+            "titulo": "Unidade 5: Revisão e Ajustes",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Revisões periódicas permitem corrigir rumo antes que pequenos desvios virem problemas.","pergunta":"Com que frequência você revisará seu plano?"},
+              {"tipo":"pratica_real","tarefa":"Programe revisões trimestrais e registre um ajuste após a primeira revisão.","recompensa_xp":140},
+              {"tipo":"arrastar_classificar","pergunta":"Classifique ações por prioridade na revisão","itens":[{"id":1,"texto":"Cortar gastos supérfluos","categoria":"alta"},{"id":2,"texto":"Mudar banco","categoria":"baixa"}],"categorias":["alta","baixa"],"recompensa_xp":120},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Revisar raramente","correta":false},{"texto":"Revisar com regularidade","correta":true}]},
+              {"tipo":"compromisso_final","texto":"Vou revisar e ajustar meu plano trimestralmente.","acao":"Revisar trimestral"}
             ]
           }
         ]
@@ -563,6 +852,28 @@
                 "texto": "Você chegou a um ponto importante: agora já entende que disciplina não é castigo, é liberdade construída em silêncio, repetição e intenção. Cada decisão pequena que respeita seu plano financeiro aproxima você de uma vida com mais opções e menos urgência.",
                 "acao": "Assumir meu plano de crescimento"
               }
+            ]
+          },
+          {
+            "id": "u9_4",
+            "titulo": "Unidade 4: Ferramentas para Acompanhamento",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Ferramentas simples ajudam a acompanhar fluxo de caixa e metas.","pergunta":"Qual ferramenta você sente mais confortável em usar?"},
+              {"tipo":"pratica_real","tarefa":"Teste uma planilha ou app de orçamento por uma semana.","recompensa_xp":110},
+              {"tipo":"arrastar_classificar","pergunta":"Classifique ações por prioridade de acompanhamento","itens":[{"id":1,"texto":"Registrar gastos diários","categoria":"alta"},{"id":2,"texto":"Ver extrato anualmente","categoria":"baixa"}],"categorias":["alta","baixa"],"recompensa_xp":100},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Ignorar monitoramento","correta":false},{"texto":"Monitorar regularmente","correta":true}]},
+              {"tipo":"compromisso_final","texto":"Vou monitorar meu orçamento por 30 dias.","acao":"Monitorar 30d"}
+            ]
+          },
+          {
+            "id": "u9_5",
+            "titulo": "Unidade 5: Crescimento Sustentável",
+            "licoes": [
+              {"tipo":"teoria_curta","texto":"Crescer de forma sustentável exige balancear ambição com saúde financeira e mental.","pergunta":"Qual área precisa de equilíbrio na sua vida?"},
+              {"tipo":"pratica_real","tarefa":"Defina três metas de aporte para os próximos 12 meses.","recompensa_xp":150},
+              {"tipo":"escolha_multipla","opcoes":[{"texto":"Buscar crescimento rápido a qualquer custo","correta":false},{"texto":"Crescer com consistência","correta":true}]},
+              {"tipo":"reflexao_honesta","texto":"Qual é o seu maior medo ao investir a longo prazo?","pergunta":"Escreva sua resposta","campo_texto":true},
+              {"tipo":"compromisso_final","texto":"Vou seguir um plano de aportes consistente por 12 meses.","acao":"Aportar consistente"}
             ]
           }
         ]
