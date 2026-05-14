@@ -1,76 +1,76 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import { theme } from '../../theme/theme';
 import HomeHeader from '../../components/home/HomeHeader';
 import SectionBanner from '../../components/home/SectionBanner';
 import TrailNode from '../../components/home/TrailNode';
-import LessonModal from '../../components/home/LessonModal';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, auth } from '../../services/firebaseConfig';
 const trailDataRaw = require('./test.json');
 
-let globalNodeIndex = 0;
-const totalNodes = trailDataRaw.trilha.secoes.reduce((acc, sec) => acc + sec.unidades.length, 0);
-
-const sectionsData = trailDataRaw.trilha.secoes.map((secao) => {
-    return {
-        id: secao.id,
-        titulo: secao.titulo,
-        unidades: secao.unidades.map((unidade) => {
-            const index = globalNodeIndex++;
-            const positions = [0, 40, 70, 30, -20, -60, -80, -40];
-            
-            let status = 'locked';
-            let color = '#E5E5E5';
-            let icon = 'book-open-outline';
-            let type = 'icon';
-
-            if (index === 0) {
-                status = 'completed';
-                color = '#FFC800';
-                icon = 'star';
-                type = 'star';
-            } else if (index === 1) {
-                status = 'current';
-                color = '#1CB0F6';
-                icon = 'book-open-page-variant';
-            } else if (index === totalNodes - 1) {
-                icon = 'treasure-chest';
-                type = 'treasure';
-            }
-
-            return {
-                id: unidade.id,
-                title: index === 0 ? trailDataRaw.trilha.nome : undefined,
-                description: unidade.titulo,
-                type: type,
-                color: color,
-                status: status,
-                position: positions[index % positions.length],
-                icon: icon,
-                lessonData: unidade
-            };
-        })
-    };
-});
+const positions = [0, 40, 70, 30, -20, -60, -80, -40];
 
 const HomeScreen = () => {
     const insets = useSafeAreaInsets();
+    const navigation = useNavigation();
     const animation = React.useRef(null);
     const [streak, setStreak] = useState(0);
     const [coins, setCoins] = useState(0);
     const [hearts, setHearts] = useState(6);
-    const [selectedLesson, setSelectedLesson] = useState(null);
     const [isPremium, setIsPremium] = useState(false);
-  const [nextEnergyTimeStr, setNextEnergyTimeStr] = useState("30:00");
+    const [nextEnergyTimeStr, setNextEnergyTimeStr] = useState("30:00");
+    const [completedUnitIds, setCompletedUnitIds] = useState([]);
 
-  useEffect(() => {
+    const sectionsData = useMemo(() => {
+        const completedSet = new Set(completedUnitIds);
+        const orderedUnitIds = trailDataRaw.trilha.secoes.flatMap((secao) => secao.unidades.map((unidade) => unidade.id));
+        const firstIncompleteIndex = orderedUnitIds.findIndex((unitId) => !completedSet.has(unitId));
+        let globalIndex = 0;
+
+        return trailDataRaw.trilha.secoes.map((secao) => ({
+            id: secao.id,
+            titulo: secao.titulo,
+            unidades: secao.unidades.map((unidade) => {
+                const index = globalIndex++;
+                const isCompleted = completedSet.has(unidade.id);
+                const isCurrent = !isCompleted && index === firstIncompleteIndex;
+                const status = isCompleted ? 'completed' : (isCurrent ? 'current' : 'locked');
+
+                let color = '#E5E5E5';
+                let icon = 'lock-outline';
+                let type = 'icon';
+
+                if (isCompleted) {
+                    color = '#22C55E';
+                    icon = 'check-bold';
+                } else if (isCurrent) {
+                    color = '#1CB0F6';
+                    icon = 'book-open-page-variant';
+                }
+
+                return {
+                    id: unidade.id,
+                    title: index === 0 ? trailDataRaw.trilha.nome : undefined,
+                    description: unidade.titulo,
+                    type,
+                    color,
+                    status,
+                    position: positions[index % positions.length],
+                    icon,
+                    lessonData: unidade
+                };
+            })
+        }));
+    }, [completedUnitIds]);
+
+    useEffect(() => {
     const user = auth.currentUser;
-    if (!user) return;
+        if (!user) return;
 
-    let energyInterval = null;
+        let energyInterval = null;
 
     // Load Streak
     const streakRef = doc(db, 'users', user.uid, 'gamification', 'streak');        
@@ -95,6 +95,22 @@ const HomeScreen = () => {
                 lastUpdated: new Date().toISOString()
             });
             setCoins(25);
+        }
+    });
+
+    // Load Trail Progress
+    const trailProgressRef = doc(db, 'users', user.uid, 'gamification', 'trailProgress');
+    const unsubscribeTrail = onSnapshot(trailProgressRef, async (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const ids = Array.isArray(data.completedUnitIds) ? data.completedUnitIds : [];
+            setCompletedUnitIds(ids);
+        } else {
+            await setDoc(trailProgressRef, {
+                completedUnitIds: [],
+                updatedAt: new Date().toISOString()
+            });
+            setCompletedUnitIds([]);
         }
     });
 
@@ -164,62 +180,66 @@ const HomeScreen = () => {
     return () => {
         unsubscribeStreak();
         unsubscribeEconomy();
+        unsubscribeTrail();
         unsubscribeEnergy();
         if (energyInterval) clearInterval(energyInterval);
     };
     }, []);
 
+    const handleNodePress = (selectedNode) => {
+        if (selectedNode.status === 'locked') {
+            Alert.alert('Unidade bloqueada', 'Conclua a unidade atual para liberar a proxima.');
+            return;
+        }
 
-  return (
-    <View style={[styles.safeArea, { paddingTop: insets.top }]}>
-      <HomeHeader 
-        streak={streak} 
-        coins={coins} 
-        hearts={hearts} 
-        isPremium={isPremium} 
-        nextEnergyTime={nextEnergyTimeStr} 
-      />
+        navigation.navigate('Lesson', { lessonData: selectedNode.lessonData });
+    };
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {sectionsData.map((section, index) => {
-            const isFirstGroup = index === 0;
 
-            return (
-              <View key={`section-${section.id}`}>
-                <SectionBanner
-                    section={index + 1}
-                    unit={section.unidades.length}
-                    description={section.titulo}
-                />
-                <View style={styles.trailContainer}>
-                    {isFirstGroup && (
-                        <LottieView
-                            autoPlay
-                            loop={true}
-                            style={{ width: 150, height: 150 }}
-                            source={require('../../assets/lottie/loading-coin.json')}
+    return (
+        <View style={[styles.safeArea, { paddingTop: insets.top }]}>
+        <HomeHeader 
+            streak={streak} 
+            coins={coins} 
+            hearts={hearts} 
+            isPremium={isPremium} 
+            nextEnergyTime={nextEnergyTimeStr} 
+        />
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {sectionsData.map((section, index) => {
+                const isFirstGroup = index === 0;
+
+                return (
+                    <View key={`section-${section.id}`}>
+                        <SectionBanner
+                            section={index + 1}
+                            unit={section.unidades.length}
+                            description={section.titulo}
                         />
-                    )}
-                    {section.unidades.map(node => (
-                        <TrailNode 
-                            key={node.id} 
-                            node={node} 
-                            onPress={(selectedNode) => setSelectedLesson(selectedNode.lessonData)}
-                        />
-                    ))}
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
-
-      <LessonModal
-        visible={!!selectedLesson}
-        onClose={() => setSelectedLesson(null)}
-        lessonData={selectedLesson}
-      />
-    </View>
-  );
+                        <View style={styles.trailContainer}>
+                            {isFirstGroup && (
+                                <LottieView
+                                    autoPlay
+                                    loop={true}
+                                    style={{ width: 150, height: 150 }}
+                                    source={require('../../assets/lottie/loading-coin.json')}
+                                />
+                            )}
+                            {section.unidades.map(node => (
+                                <TrailNode 
+                                    key={node.id} 
+                                    node={node} 
+                                    onPress={handleNodePress}
+                                />
+                            ))}
+                        </View>
+                    </View>
+                );
+            })}
+            </ScrollView>
+        </View>
+    );
 };
 
 const styles = StyleSheet.create({
