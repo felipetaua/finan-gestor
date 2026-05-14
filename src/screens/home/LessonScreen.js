@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, PanResponder, Animated } from 'react-native';
 import { theme } from '../../theme/theme';
 import Button from '../../components/common/Button';
@@ -17,8 +17,47 @@ export default function LessonScreen({ route, navigation }) {
     const [isFinished, setIsFinished] = useState(false);
     const [answeredOptionIndex, setAnsweredOptionIndex] = useState(null);
     const [dragClassifications, setDragClassifications] = useState({});
+    const [sequenceSelection, setSequenceSelection] = useState([]);
+    const [sequencePool, setSequencePool] = useState([]);
+    const [radarSelection, setRadarSelection] = useState([]);
+    const [miniGameLocked, setMiniGameLocked] = useState(false);
 
     const totalPages = licoes.length;
+
+    useEffect(() => {
+        const currentLesson = licoes[currentPage];
+
+        setAnsweredOptionIndex(null);
+        setDragClassifications({});
+        setSequenceSelection([]);
+        setRadarSelection([]);
+        setMiniGameLocked(false);
+
+        if (currentLesson?.tipo === 'sequencia_cofre') {
+            const nextPool = [...(currentLesson.sequencia || [])].sort(() => Math.random() - 0.5);
+            setSequencePool(nextPool);
+        } else {
+            setSequencePool([]);
+        }
+    }, [currentPage, licoes]);
+
+    const subtractHeart = async () => {
+        if (!auth.currentUser) return;
+
+        const uid = auth.currentUser.uid;
+
+        try {
+            const energyRef = doc(db, 'users', uid, 'gamification', 'energy');
+            const energySnap = await getDoc(energyRef);
+            if (energySnap.exists() && energySnap.data().hearts > 0) {
+                await updateDoc(energyRef, {
+                    hearts: increment(-1)
+                });
+            }
+        } catch (e) {
+            console.log('Error updating energy:', e);
+        }
+    };
 
     const handleAnswerAndNext = async (opcao, index) => {
         if (answeredOptionIndex !== null) return; // Prevent double tapping
@@ -32,21 +71,7 @@ export default function LessonScreen({ route, navigation }) {
         else if (opcao.correta === false) xpGained = 5;
         else xpGained = 10;
 
-        // Firebase Background Logic (Subtract 1 heart)
-        if (auth.currentUser) {
-            const uid = auth.currentUser.uid;
-            try {
-                const energyRef = doc(db, 'users', uid, 'gamification', 'energy');
-                const energySnap = await getDoc(energyRef);
-                if (energySnap.exists() && energySnap.data().hearts > 0) {
-                    await updateDoc(energyRef, {
-                        hearts: increment(-1)
-                    });
-                }
-            } catch (e) {
-                console.log("Error updating energy:", e);
-            }
-        }
+        await subtractHeart();
 
         setTimeout(() => {
             handleNext(xpGained);
@@ -124,6 +149,87 @@ export default function LessonScreen({ route, navigation }) {
         navigation.goBack();
     };
 
+    const getSequenceXp = () => {
+        const currentLesson = licoes[currentPage];
+        const expectedIds = currentLesson?.sequencia?.map((item) => item.id) || [];
+
+        if (!expectedIds.length) return currentLesson?.recompensa_xp || 150;
+
+        const matches = expectedIds.reduce((count, expectedId, index) => {
+            return count + (sequenceSelection[index] === expectedId ? 1 : 0);
+        }, 0);
+
+        if (matches === expectedIds.length) return currentLesson.recompensa_xp || 180;
+        return Math.max(30, Math.floor(((currentLesson.recompensa_xp || 180) * matches) / expectedIds.length));
+    };
+
+    const handleCompleteSequence = async () => {
+        if (miniGameLocked) return;
+
+        const currentLesson = licoes[currentPage];
+        const expectedIds = currentLesson?.sequencia?.map((item) => item.id) || [];
+
+        if (!expectedIds.length || sequenceSelection.length !== expectedIds.length) {
+            return;
+        }
+
+        setMiniGameLocked(true);
+        await subtractHeart();
+
+        setTimeout(() => {
+            handleNext(getSequenceXp());
+        }, 1200);
+    };
+
+    const handleRadarToggle = (itemId) => {
+        if (miniGameLocked) return;
+
+        setRadarSelection((prev) => {
+            if (prev.includes(itemId)) {
+                return prev.filter((selectedId) => selectedId !== itemId);
+            }
+
+            return [...prev, itemId];
+        });
+    };
+
+    const getRadarXp = () => {
+        const currentLesson = licoes[currentPage];
+        const leakIds = (currentLesson?.itens || [])
+            .filter((item) => item.eh_vazamento)
+            .map((item) => item.id);
+
+        const selectedSet = new Set(radarSelection);
+        const hits = leakIds.filter((itemId) => selectedSet.has(itemId)).length;
+        const falsePositives = radarSelection.filter((itemId) => !leakIds.includes(itemId)).length;
+        const misses = leakIds.length - hits;
+
+        const baseXp = currentLesson?.recompensa_xp || 170;
+
+        if (misses === 0 && falsePositives === 0) return baseXp;
+
+        const penalty = (misses + falsePositives) * 20;
+        return Math.max(20, baseXp - penalty);
+    };
+
+    const handleCompleteRadar = async () => {
+        if (miniGameLocked) return;
+
+        const currentLesson = licoes[currentPage];
+        const leakIds = (currentLesson?.itens || [])
+            .filter((item) => item.eh_vazamento)
+            .map((item) => item.id);
+
+        if (!leakIds.length) return;
+
+        setMiniGameLocked(true);
+        await subtractHeart();
+
+        setTimeout(() => {
+            handleNext(getRadarXp());
+        }, 1200);
+    };
+
     if (!lessonData) {
         return (
             <View style={styles.container}>
@@ -165,6 +271,8 @@ export default function LessonScreen({ route, navigation }) {
 
     const renderLicao = () => {
         const licao = licoes[currentPage];
+        const sequenceItems = sequencePool.length ? sequencePool : (licao.sequencia || []);
+        const expectedLeakIds = (licao.itens || []).filter((item) => item.eh_vazamento).map((item) => item.id);
         
         return (
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -225,6 +333,113 @@ export default function LessonScreen({ route, navigation }) {
                                 );
                             })}
                         </View>
+                    </View>
+                )}
+
+                {licao.tipo === 'sequencia_cofre' && (
+                    <View style={[styles.card, styles.sequenceCard]}>
+                        <View style={styles.iconContainer}>
+                            <Ionicons name="key" size={40} color="#7C3AED" />
+                        </View>
+                        <Text style={styles.sectionTitle}>Cofre Neon</Text>
+                        <Text style={styles.sectionText}>{licao.texto}</Text>
+
+                        <View style={styles.sequenceTrack}>
+                            {(licao.sequencia || []).map((item, index) => {
+                                const selectedId = sequenceSelection[index];
+                                const selectedItem = (licao.sequencia || []).find((sequenceItem) => sequenceItem.id === selectedId);
+
+                                return (
+                                    <View key={item.id} style={styles.sequenceSlot}>
+                                        <Text style={styles.sequenceSlotIndex}>{index + 1}</Text>
+                                        <Text style={styles.sequenceSlotText} numberOfLines={2}>
+                                            {selectedItem ? selectedItem.texto : 'Segredo travado'}
+                                        </Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+
+                        <Text style={styles.availableItemsTitle}>Peças do cofre</Text>
+                        <View style={styles.sequencePool}>
+                            {sequenceItems.map((item) => {
+                                const selectedIndex = sequenceSelection.indexOf(item.id);
+                                const isSelected = selectedIndex !== -1;
+
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={[styles.sequenceChip, isSelected && styles.sequenceChipSelected]}
+                                        onPress={() => {
+                                            if (miniGameLocked) return;
+
+                                            setSequenceSelection((prev) => {
+                                                if (prev.includes(item.id)) {
+                                                    return prev.filter((selectedId) => selectedId !== item.id);
+                                                }
+
+                                                if (prev.length >= (licao.sequencia || []).length) {
+                                                    return prev;
+                                                }
+
+                                                return [...prev, item.id];
+                                            });
+                                        }}
+                                        disabled={miniGameLocked}
+                                    >
+                                        <Text style={[styles.sequenceChipText, isSelected && styles.sequenceChipTextSelected]}>
+                                            {isSelected ? `${selectedIndex + 1}. ${item.texto}` : item.texto}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+
+                        <Text style={styles.helperText}>
+                            Monte a ordem correta para trancar o vazamento financeiro.
+                        </Text>
+                    </View>
+                )}
+
+                {licao.tipo === 'radar_vazamento' && (
+                    <View style={[styles.card, styles.radarCard]}>
+                        <View style={styles.iconContainer}>
+                            <Ionicons name="radio" size={40} color="#DB2777" />
+                        </View>
+                        <Text style={styles.sectionTitle}>Radar do Vazamento</Text>
+                        <Text style={styles.sectionText}>{licao.texto}</Text>
+
+                        <View style={styles.radarGrid}>
+                            {(licao.itens || []).map((item) => {
+                                const isSelected = radarSelection.includes(item.id);
+                                const isLeak = expectedLeakIds.includes(item.id);
+
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={[
+                                            styles.radarItem,
+                                            isSelected && styles.radarItemSelected,
+                                            isSelected && isLeak && styles.radarItemLeak,
+                                            isSelected && !isLeak && styles.radarItemSafe,
+                                        ]}
+                                        onPress={() => handleRadarToggle(item.id)}
+                                        disabled={miniGameLocked}
+                                    >
+                                        <Text style={styles.radarItemText}>{item.texto}</Text>
+                                        <Ionicons
+                                            name={isSelected ? 'scan' : 'ellipse-outline'}
+                                            size={18}
+                                            color={isSelected ? '#FFFFFF' : '#9CA3AF'}
+                                        />
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+
+                        <Text style={styles.helperText}>
+                            Marque os itens que drenam dinheiro sem devolver valor.
+                        </Text>
                     </View>
                 )}
 
@@ -335,6 +550,16 @@ export default function LessonScreen({ route, navigation }) {
         return tipo === 'arrastar_classificar';
     };
 
+    const isSequenceType = () => {
+        const tipo = licoes[currentPage]?.tipo;
+        return tipo === 'sequencia_cofre';
+    };
+
+    const isRadarType = () => {
+        const tipo = licoes[currentPage]?.tipo;
+        return tipo === 'radar_vazamento';
+    };
+
     const handleDragClassify = (itemId, categoria) => {
         setDragClassifications(prev => ({
             ...prev,
@@ -407,7 +632,7 @@ export default function LessonScreen({ route, navigation }) {
             </View>
 
             {/* O footer só é mostrado (botão de continuar) se não for uma lição do tipo "escolha multipla" onde o usuário aperta a opção. */}
-            {!isOptionType() && !isDragType() && (
+            {!isOptionType() && !isDragType() && !isSequenceType() && !isRadarType() && (
                 <View style={styles.footer}>
                     <Button  
                         onPress={() => {
@@ -419,6 +644,26 @@ export default function LessonScreen({ route, navigation }) {
                             handleNext(xp);
                         }} 
                         title={licoes[currentPage]?.acao || "Continuar"}
+                        type='primary'
+                    />
+                </View>
+            )}
+
+            {isSequenceType() && (
+                <View style={styles.footer}>
+                    <Button
+                        onPress={handleCompleteSequence}
+                        title={sequenceSelection.length === (licoes[currentPage]?.sequencia || []).length ? 'Travar Cofre' : 'Complete a sequência'}
+                        type='primary'
+                    />
+                </View>
+            )}
+
+            {isRadarType() && (
+                <View style={styles.footer}>
+                    <Button
+                        onPress={handleCompleteRadar}
+                        title='Analisar Radar'
                         type='primary'
                     />
                 </View>
@@ -679,5 +924,107 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#FFFFFF',
         fontWeight: '600',
+    },
+    sequenceCard: {
+        paddingBottom: 8,
+    },
+    sequenceTrack: {
+        width: '100%',
+        gap: 10,
+        marginTop: 10,
+        marginBottom: 16,
+    },
+    sequenceSlot: {
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 14,
+        borderRadius: 16,
+        backgroundColor: '#F5F3FF',
+        borderWidth: 1,
+        borderColor: '#DDD6FE',
+    },
+    sequenceSlotIndex: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#7C3AED',
+        color: '#FFFFFF',
+        textAlign: 'center',
+        textAlignVertical: 'center',
+        fontWeight: 'bold',
+    },
+    sequenceSlotText: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: '600',
+        color: theme.colors.text,
+    },
+    sequencePool: {
+        width: '100%',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginBottom: 10,
+    },
+    sequenceChip: {
+        borderRadius: 999,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    sequenceChipSelected: {
+        backgroundColor: '#7C3AED',
+        borderColor: '#7C3AED',
+    },
+    sequenceChipText: {
+        color: theme.colors.text,
+        fontWeight: '600',
+    },
+    sequenceChipTextSelected: {
+        color: '#FFFFFF',
+    },
+    helperText: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+    radarCard: {
+        paddingBottom: 8,
+    },
+    radarGrid: {
+        width: '100%',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginBottom: 14,
+    },
+    radarItem: {
+        width: '48%',
+        minHeight: 96,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        backgroundColor: '#FFFFFF',
+        padding: 14,
+        justifyContent: 'space-between',
+    },
+    radarItemSelected: {
+        borderColor: '#DB2777',
+    },
+    radarItemLeak: {
+        backgroundColor: '#DB2777',
+    },
+    radarItemSafe: {
+        backgroundColor: '#0F766E',
+    },
+    radarItemText: {
+        color: theme.colors.text,
+        fontWeight: '600',
+        fontSize: 14,
     }
 });

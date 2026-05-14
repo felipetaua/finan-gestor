@@ -873,6 +873,30 @@
               {"tipo":"pratica_real","tarefa":"Defina três metas de aporte para os próximos 12 meses.","recompensa_xp":150},
               {"tipo":"escolha_multipla","opcoes":[{"texto":"Buscar crescimento rápido a qualquer custo","correta":false},{"texto":"Crescer com consistência","correta":true}]},
               {"tipo":"reflexao_honesta","texto":"Qual é o seu maior medo ao investir a longo prazo?","pergunta":"Escreva sua resposta","campo_texto":true},
+              {
+                "tipo": "sequencia_cofre",
+                "texto": "O Cofre Neon só abre quando você encosta na ordem certa das proteções. Monte a sequência que fecha vazamentos antes que eles virem hábito.",
+                "sequencia": [
+                  {"id": "espera", "texto": "Esperar 24h antes de comprar"},
+                  {"id": "reserva", "texto": "Separar uma fatia para a reserva"},
+                  {"id": "corte", "texto": "Cortar a assinatura fantasma"},
+                  {"id": "meta", "texto": "Revisar a meta do mês"}
+                ],
+                "recompensa_xp": 180
+              },
+              {
+                "tipo": "radar_vazamento",
+                "texto": "Seu radar detectou ruídos na carteira. Marque apenas o que drena dinheiro sem devolver valor real.",
+                "itens": [
+                  {"id": 1, "texto": "Assinatura esquecida", "eh_vazamento": true},
+                  {"id": 2, "texto": "Mercado da semana", "eh_vazamento": false},
+                  {"id": 3, "texto": "Delivery por impulso", "eh_vazamento": true},
+                  {"id": 4, "texto": "Reserva automática", "eh_vazamento": false},
+                  {"id": 5, "texto": "Compra de status", "eh_vazamento": true},
+                  {"id": 6, "texto": "Conta de luz", "eh_vazamento": false}
+                ],
+                "recompensa_xp": 170
+              },
               {"tipo":"compromisso_final","texto":"Vou seguir um plano de aportes consistente por 12 meses.","acao":"Aportar consistente"}
             ]
           }
