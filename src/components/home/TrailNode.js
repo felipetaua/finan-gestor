@@ -16,7 +16,8 @@ const TrailNode = ({ node, onPress }) => {
                 </View>
             )}
             <TouchableOpacity
-                onPress={() => onPress && onPress(node)}
+                onPress={() => !isLocked && onPress && onPress(node)}
+                disabled={isLocked}
                 activeOpacity={0.7}
                 style={[
                     styles.node,
