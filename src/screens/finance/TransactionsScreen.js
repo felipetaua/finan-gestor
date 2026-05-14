@@ -16,6 +16,7 @@ const TransactionsScreen = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [sortOrder, setSortOrder] = useState('desc'); // 'desc' = mais recente primeiro, 'asc' = mais antigo primeiro
 
     // Selection state
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -173,8 +174,16 @@ const TransactionsScreen = () => {
         data: section.data.filter(item => 
             item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.category?.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-    }));
+        ).sort((a, b) => {
+            const timeA = a.date?.seconds || 0;
+            const timeB = b.date?.seconds || 0;
+            return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+        })
+    })).sort((a, b) => {
+        const timeA = a.data[0]?.date?.seconds || 0;
+        const timeB = b.data[0]?.date?.seconds || 0;
+        return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
 
     const renderTransactionItem = ({ item }) => {
         const isSelected = selectedIds.includes(item.id);
@@ -279,6 +288,18 @@ const TransactionsScreen = () => {
                         placeholderTextColor="#999"
                     />
                 </View>
+            </View>
+
+            {/* Filter Toggle */}
+            <View style={styles.filterRow}>
+                <Text style={styles.filterLabel}>Data</Text>
+                <TouchableOpacity onPress={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')} style={styles.filterIconBtn}>
+                    <MaterialCommunityIcons 
+                        name={sortOrder === 'desc' ? "sort-calendar-descending" : "sort-calendar-ascending"} 
+                        size={22} 
+                        color="#666" 
+                    />
+                </TouchableOpacity>
             </View>
 
             {/* Transaction List */}
@@ -497,6 +518,22 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#000',
         padding: 0,
+    },
+    filterRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginHorizontal: 20,
+        marginBottom: 10,
+    },
+    filterLabel: {
+        fontSize: 14,
+        color: '#666',
+        fontWeight: 'bold',
+        marginRight: 8,
+    },
+    filterIconBtn: {
+        padding: 4,
     },
     amountEditRow: {
         flexDirection: 'row',

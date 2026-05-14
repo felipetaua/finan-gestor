@@ -48,6 +48,18 @@ const FloatingActionButton = () => {
         ],
     };
 
+    const aiStyle = {
+        transform: [
+            { scale: animation },
+            {
+                translateY: animation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -190],
+                }),
+            },
+        ],
+    };
+
     const rotation = animation.interpolate({
         inputRange: [0, 1],
         outputRange: ['0deg', '45deg'],
@@ -55,6 +67,19 @@ const FloatingActionButton = () => {
 
     return (
         <View style={styles.container}>
+            <Animated.View style={[styles.item, aiStyle]}>
+                <TouchableOpacity 
+                    style={[styles.subButton, { backgroundColor: '#8B5CF6' }]}
+                    onPress={() => {
+                        toggleMenu();
+                        navigation.navigate('AiAddTransaction');
+                    }}
+                >
+                    <MaterialCommunityIcons name="robot-outline" size={24} color="white" />
+                </TouchableOpacity>
+                <Text style={styles.label}>IA</Text>
+            </Animated.View>
+
             <Animated.View style={[styles.item, incomeStyle]}>
                 <TouchableOpacity 
                     style={[styles.subButton, { backgroundColor: theme.colors.success }]}
