@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import BottomTabNavigator from '../navigation/BottomTabNavigator';
+import MainStackNavigator from '../navigation/MainStackNavigator';
 import AuthStackNavigator from '../navigation/AuthStackNavigator';
 import SplashScreen from './splash/SplashScreen';
 import { auth } from '../services/firebaseConfig';
@@ -30,7 +30,7 @@ export default function AppNavigation() {
 
     return (
         <NavigationContainer>
-            {isAuthenticated ? <BottomTabNavigator /> : <AuthStackNavigator />}
+            {isAuthenticated ? <MainStackNavigator /> : <AuthStackNavigator />}
             <StatusBar style="auto" />
         </NavigationContainer>
     );
