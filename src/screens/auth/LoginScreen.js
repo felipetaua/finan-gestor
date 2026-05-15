@@ -32,37 +32,76 @@ export default function LoginScreen({ navigation }) {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
+    // Selecionar o client ID correto baseado na plataforma
+    const getClientId = () => {
+        if (Platform.OS === 'web') {
+            return process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+        } else if (Platform.OS === 'android') {
+            return process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+        }
+        return process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+    };
+
     const [request, response, promptAsync] = Google.useAuthRequest({
-        clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+        clientId: getClientId(),
         androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-        redirectUri: makeRedirectUri({ scheme: 'finan' }),
+        redirectUri: makeRedirectUri({
+            useProxy: true,
+        }),
     });
 
     useEffect(() => {
         if (request) {
             console.log("URI de redirecionamento sendo usada:", request.redirectUri);
+            console.log("Plataforma:", Platform.OS);
+            console.log("Client ID selecionado:", getClientId());
+            console.log("Web Client ID:", process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+            console.log("Android Client ID:", process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
         }
     }, [request]);
 
     useEffect(() => {
         if (response?.type === 'success') {
-            const { id_token, authentication } = response;
-            // No SDK 54, o token pode vir em lugares diferentes dependendo da plataforma
-            const token = id_token || authentication?.idToken || response.params?.id_token;
+            const { authentication } = response;
+            const accessToken = authentication?.accessToken;
             
-            console.log("Login Google sucesso! Autenticando no Firebase...");
+            console.log("Login Google sucesso!");
+            console.log("Access Token recebido:", !!accessToken);
             
-            if (token) {
-                const credential = GoogleAuthProvider.credential(token);
-                handleFirebaseSocialLogin(credential, 'google');
+            if (accessToken) {
+                // Usar o accessToken para obter informações do usuário do Google
+                fetchGoogleUserInfo(accessToken);
             } else {
-                console.error("Token não encontrado na resposta do Google:", response);
+                console.error("AccessToken não encontrado na resposta do Google:", response);
+                Alert.alert("Erro", "Não foi possível extrair o token do Google. Tente novamente.");
             }
         } else if (response?.type === 'error') {
             console.error("Erro no AuthSession:", response.error);
+            Alert.alert("Erro de Login", `${response.error?.message || 'Erro ao conectar com Google'}`);
+        } else if (response?.type === 'dismiss') {
+            console.log("Usuário cancelou o login do Google");
         }
     }, [response]);
+
+    const fetchGoogleUserInfo = async (accessToken) => {
+        try {
+            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
+            const data = await response.json();
+            console.log("Dados do usuário Google:", data);
+            
+            // Usar o accessToken para criar credential Firebase
+            const credential = GoogleAuthProvider.credential(null, accessToken);
+            handleFirebaseSocialLogin(credential, 'google');
+        } catch (error) {
+            console.error("Erro ao buscar informações do usuário:", error);
+            Alert.alert("Erro", "Não foi possível obter informações da conta Google.");
+        }
+    };
 
     const [
         createUserWithEmailAndPassword,
