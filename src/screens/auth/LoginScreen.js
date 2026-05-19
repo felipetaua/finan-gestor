@@ -16,10 +16,11 @@ import {
     signInWithCredential,
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding } from '../../hooks/useOnboarding';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
+import { fetchGoogleUserInfo } from '../../api/endpoints/authApi';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -71,7 +72,7 @@ export default function LoginScreen({ navigation }) {
             
             if (accessToken) {
                 // Usar o accessToken para obter informações do usuário do Google
-                fetchGoogleUserInfo(accessToken);
+                fetchGoogleUserInfoHandler(accessToken);
             } else {
                 console.error("AccessToken não encontrado na resposta do Google:", response);
                 Alert.alert("Erro", "Não foi possível extrair o token do Google. Tente novamente.");
@@ -84,14 +85,9 @@ export default function LoginScreen({ navigation }) {
         }
     }, [response]);
 
-    const fetchGoogleUserInfo = async (accessToken) => {
+    const fetchGoogleUserInfoHandler = async (accessToken) => {
         try {
-            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
-            const data = await response.json();
+            const data = await fetchGoogleUserInfo(accessToken);
             console.log("Dados do usuário Google:", data);
             
             // Usar o accessToken para criar credential Firebase

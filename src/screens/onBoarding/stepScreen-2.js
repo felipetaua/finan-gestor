@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { theme } from '../../theme/theme';
 import Button from '../../components/common/Button';
 import OnboardingHeader from '../../components/common/OnboardingHeader';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding } from '../../hooks/useOnboarding';
 
 export default function StepScreen2({ navigation }) {
     const { updateOnboardingData } = useOnboarding();

@@ -14,7 +14,7 @@ export const CURRENCY_OPTIONS = [
 
 const DEFAULT_CURRENCY = CURRENCY_OPTIONS[0];
 
-const CurrencyContext = createContext(undefined);
+export const CurrencyContext = createContext(undefined);
 
 export const CurrencyProvider = ({ children }) => {
     const [currencyCode, setCurrencyCode] = useState(DEFAULT_CURRENCY.code);
@@ -96,10 +96,3 @@ export const CurrencyProvider = ({ children }) => {
     return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 };
 
-export const useCurrency = () => {
-    const context = useContext(CurrencyContext);
-    if (!context) {
-        throw new Error('useCurrency deve ser usado dentro de CurrencyProvider');
-    }
-    return context;
-};

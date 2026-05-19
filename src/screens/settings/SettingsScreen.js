@@ -5,7 +5,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { auth } from '../../services/firebaseConfig';
 import { signOut } from 'firebase/auth';
-import { CURRENCY_OPTIONS, useCurrency } from '../../context/CurrencyContext';
+import { CURRENCY_OPTIONS } from '../../context/CurrencyContext';
+import { useCurrency } from '../../hooks/useCurrency';
 
 const SettingsScreen = ({ navigation }) => {
     const { selectedCurrency, setCurrency } = useCurrency();
