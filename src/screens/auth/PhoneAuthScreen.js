@@ -8,7 +8,8 @@ import { FontAwesome } from '@expo/vector-icons';
 import { auth, db } from '../../services/firebaseConfig';
 import { PhoneAuthProvider, signInWithCredential } from "firebase/auth";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding } from '../../hooks/useOnboarding';
+import { fetchCountriesApi } from '../../api/endpoints/countriesApi';
 
 export default function PhoneAuthScreen({ navigation }) {
     const insets = useSafeAreaInsets();
@@ -43,8 +44,7 @@ export default function PhoneAuthScreen({ navigation }) {
         const fetchCountries = async () => {
             try {
                 console.log("Iniciando busca na REST Countries API...");
-                const response = await fetch('https://restcountries.com/v3.1/all?fields=name,translations,flags,idd,cca2');
-                const data = await response.json();
+                const data = await fetchCountriesApi();
                 
                 const priorityCodes = ['BR', 'PT', 'US', 'ES', 'GB', 'AO', 'MZ'];
                 

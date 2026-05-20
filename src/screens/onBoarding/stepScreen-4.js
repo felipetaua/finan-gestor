@@ -4,7 +4,7 @@ import { theme } from '../../theme/theme';
 import Button from '../../components/common/Button';
 import SelectableOption from '../../components/common/SelectableOption';
 import OnboardingHeader from '../../components/common/OnboardingHeader';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding } from '../../hooks/useOnboarding';
 
 
 export default function StepScreen4({ navigation }) {
