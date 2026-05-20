@@ -7,7 +7,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle, G } from 'react-native-svg';
 import { auth, db } from '../../services/firebaseConfig';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { useCurrency } from '../../context/CurrencyContext';
+import { useCurrency } from '../../hooks/useCurrency';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

@@ -17,7 +17,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { db, auth } from '../../services/firebaseConfig';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, increment } from 'firebase/firestore';
-import { useCurrency } from '../../context/CurrencyContext';
+import { useCurrency } from '../../hooks/useCurrency';
 
 const CATEGORIES = {
     expense: [

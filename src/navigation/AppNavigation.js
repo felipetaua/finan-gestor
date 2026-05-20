@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import MainStackNavigator from '../navigation/MainStackNavigator';
-import AuthStackNavigator from '../navigation/AuthStackNavigator';
-import SplashScreen from './splash/SplashScreen';
+import MainStackNavigator from './MainStackNavigator';
+import AuthStackNavigator from './AuthStackNavigator';
+import SplashScreen from '../screens/splash/SplashScreen';
 import { auth } from '../services/firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
 

@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import AppNavigation from './src/screens/appNavegation';
+import AppNavigation from './src/navigation/AppNavigation';
 import { OnboardingProvider } from './src/context/OnboardingContext';
 import { CurrencyProvider } from './src/context/CurrencyContext';
 
