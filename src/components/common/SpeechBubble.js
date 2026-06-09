@@ -5,7 +5,10 @@ import { theme } from '../../theme/theme';
 const SpeechBubble = ({ children, style, textStyle }) => {
     return (
         <View style={[styles.bubbleContainer, style]}>
-            <View style={styles.triangle} />
+            <View style={styles.triangleContainer}>
+                <View style={styles.triangleBorder} />
+                <View style={styles.triangleInner} />
+            </View>
             <View style={styles.bubble}>
                 {typeof children === 'string' ? (
                     <Text style={[styles.bubbleText, textStyle]}>{children}</Text>
@@ -23,7 +26,16 @@ const styles = StyleSheet.create({
         marginVertical: 15,
         width: '100%',
     },
-    triangle: {
+    triangleContainer: {
+        width: 20,
+        height: 10,
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        // Position it slightly overlapping the bubble border to look seamless
+        marginBottom: -1,
+        zIndex: 1,
+    },
+    triangleBorder: {
         width: 0,
         height: 0,
         backgroundColor: 'transparent',
@@ -33,10 +45,26 @@ const styles = StyleSheet.create({
         borderBottomWidth: 10,
         borderLeftColor: 'transparent',
         borderRightColor: 'transparent',
-        borderBottomColor: '#E6F0FF', // palette.blue.100 light blue background
+        borderBottomColor: '#E5E7EB', // Neutral light gray border
+    },
+    triangleInner: {
+        position: 'absolute',
+        bottom: -1, // Sits exactly on the bubble border to cut through it
+        width: 0,
+        height: 0,
+        backgroundColor: 'transparent',
+        borderStyle: 'solid',
+        borderLeftWidth: 9,
+        borderRightWidth: 9,
+        borderBottomWidth: 9,
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderBottomColor: '#FFFFFF', // Matches bubble background color
     },
     bubble: {
-        backgroundColor: '#E6F0FF', // palette.blue.100 equivalent
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E5E7EB',
+        borderWidth: 1,
         borderRadius: 16,
         paddingHorizontal: 20,
         paddingVertical: 15,
@@ -44,17 +72,17 @@ const styles = StyleSheet.create({
         maxWidth: 320,
         alignItems: 'center',
         justifyContent: 'center',
-        // Slight shadow for a premium feel
+        // Soft shadow for depth
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     bubbleText: {
-        fontFamily: theme.fonts?.title || 'System',
+        fontFamily: theme.fonts?.regular || 'System',
         fontSize: theme.fontSizes?.lg || 18,
-        color: '#1E4FD8', // palette.blue.700 (primaryDark) for contrast and readability
+        color: theme.colors.textPrimary || '#111827', // Neutral dark gray/black text
         fontWeight: '600',
         textAlign: 'center',
         lineHeight: 24,
