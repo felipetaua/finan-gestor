@@ -23,7 +23,7 @@ export default function StepScreen5({ navigation }) {
         const selected = options.find(opt => opt.id === selectedOption);
         const step5Data = { id: selected.id, title: selected.title };
         updateOnboardingData('step5', step5Data);
-        navigation.navigate('Login');
+        navigation.navigate('Login', { mode: 'signup' });
     };
 
     return (

@@ -24,14 +24,27 @@ import { fetchGoogleUserInfo } from '../../api/endpoints/authApi';
 
 WebBrowser.maybeCompleteAuthSession();
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
     const { onboardingData } = useOnboarding();
-    const [isLogin, setIsLogin] = useState(true);
+    const [isLogin, setIsLogin] = useState(() => {
+        if (route.params?.mode === 'signup') {
+            return false;
+        }
+        return true;
+    });
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+        if (route.params?.mode === 'signup') {
+            setIsLogin(false);
+        } else if (route.params?.mode === 'login') {
+            setIsLogin(true);
+        }
+    }, [route.params?.mode]);
 
     // Selecionar o client ID correto baseado na plataforma
     const getClientId = () => {

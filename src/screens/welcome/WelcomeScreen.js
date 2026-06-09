@@ -25,7 +25,7 @@ export default function WelcomeScreen({ navigation }) {
                     type='primary'
                 />
                 <Button
-                    onPress={() => navigation.navigate('Login')} 
+                    onPress={() => navigation.navigate('Login', { mode: 'login' })} 
                     title="Já possuo conta" 
                     type='secondary'
                 />
