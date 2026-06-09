@@ -5,6 +5,7 @@ import Button from '../../components/common/Button';
 import SelectableOption from '../../components/common/SelectableOption';
 import OnboardingHeader from '../../components/common/OnboardingHeader';
 import { useOnboarding } from '../../hooks/useOnboarding';
+import SpeechBubble from '../../components/common/SpeechBubble';
 
 
 export default function StepScreen5({ navigation }) {
@@ -38,9 +39,10 @@ export default function StepScreen5({ navigation }) {
             />
             
             <View style={styles.content}>
-                <Text style={styles.title}>Qual é o seu objetivo principal?</Text>
+                <SpeechBubble style={{ marginVertical: 10 }}>Qual é o seu objetivo principal?</SpeechBubble>
                 
                 <ScrollView 
+
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
                 >

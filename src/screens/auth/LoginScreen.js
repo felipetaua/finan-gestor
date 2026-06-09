@@ -6,13 +6,13 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { auth, db, app } from '../../services/firebaseConfig';
-import { 
-    useCreateUserWithEmailAndPassword, 
-    useSignInWithEmailAndPassword 
+import {
+    useCreateUserWithEmailAndPassword,
+    useSignInWithEmailAndPassword
 } from "react-firebase-hooks/auth";
-import { 
-    updateProfile, 
-    GoogleAuthProvider, 
+import {
+    updateProfile,
+    GoogleAuthProvider,
     signInWithCredential,
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
@@ -48,7 +48,7 @@ export default function LoginScreen({ navigation }) {
         androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
         redirectUri: makeRedirectUri({
-            useProxy: true,
+            scheme: 'finan',
         }),
     });
 
@@ -66,10 +66,10 @@ export default function LoginScreen({ navigation }) {
         if (response?.type === 'success') {
             const { authentication } = response;
             const accessToken = authentication?.accessToken;
-            
+
             console.log("Login Google sucesso!");
             console.log("Access Token recebido:", !!accessToken);
-            
+
             if (accessToken) {
                 // Usar o accessToken para obter informações do usuário do Google
                 fetchGoogleUserInfoHandler(accessToken);
@@ -89,7 +89,7 @@ export default function LoginScreen({ navigation }) {
         try {
             const data = await fetchGoogleUserInfo(accessToken);
             console.log("Dados do usuário Google:", data);
-            
+
             // Usar o accessToken para criar credential Firebase
             const credential = GoogleAuthProvider.credential(null, accessToken);
             handleFirebaseSocialLogin(credential, 'google');
@@ -132,11 +132,11 @@ export default function LoginScreen({ navigation }) {
                 console.log("Tentando criar usuário com email:", email);
                 const result = await createUserWithEmailAndPassword(email, password);
                 console.log("Resultado createUser:", result ? "Objeto recebido" : "Undefined/Null");
-                
+
                 if (result && result.user) {
                     console.log("Usuário criado. Atualizando perfil com nome:", name);
                     await updateProfile(result.user, { displayName: name });
-                    
+
                     console.log("Perfil atualizado. Salvando no Firestore...");
                     const userRef = doc(db, "users", result.user.uid);
                     await setDoc(userRef, {
@@ -247,14 +247,14 @@ export default function LoginScreen({ navigation }) {
                 </View>
 
                 <View style={styles.toggleWrapper}>
-                    <TouchableOpacity 
-                        style={[styles.toggleBtn, isLogin && styles.toggleBtnActive]} 
+                    <TouchableOpacity
+                        style={[styles.toggleBtn, isLogin && styles.toggleBtnActive]}
                         onPress={() => setIsLogin(true)}
                     >
                         <Text style={[styles.toggleBtnText, isLogin && styles.toggleBtnTextActive]}>Login</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[styles.toggleBtn, !isLogin && styles.toggleBtnActive]} 
+                    <TouchableOpacity
+                        style={[styles.toggleBtn, !isLogin && styles.toggleBtnActive]}
                         onPress={() => setIsLogin(false)}
                     >
                         <Text style={[styles.toggleBtnText, !isLogin && styles.toggleBtnTextActive]}>Criar conta</Text>
