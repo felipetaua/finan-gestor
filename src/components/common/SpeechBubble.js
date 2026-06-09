@@ -31,7 +31,6 @@ const styles = StyleSheet.create({
         height: 10,
         alignItems: 'center',
         justifyContent: 'flex-end',
-        // Position it slightly overlapping the bubble border to look seamless
         marginBottom: -1,
         zIndex: 1,
     },
@@ -45,11 +44,11 @@ const styles = StyleSheet.create({
         borderBottomWidth: 10,
         borderLeftColor: 'transparent',
         borderRightColor: 'transparent',
-        borderBottomColor: '#E5E7EB', // Neutral light gray border
+        borderBottomColor: '#E5E7EB',
     },
     triangleInner: {
         position: 'absolute',
-        bottom: -1, // Sits exactly on the bubble border to cut through it
+        bottom: -1, 
         width: 0,
         height: 0,
         backgroundColor: 'transparent',
@@ -59,7 +58,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 9,
         borderLeftColor: 'transparent',
         borderRightColor: 'transparent',
-        borderBottomColor: '#FFFFFF', // Matches bubble background color
+        borderBottomColor: '#FFFFFF', 
     },
     bubble: {
         backgroundColor: '#FFFFFF',
@@ -80,9 +79,9 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
     bubbleText: {
-        fontFamily: theme.fonts?.regular || 'System',
-        fontSize: theme.fontSizes?.lg || 18,
-        color: theme.colors.textPrimary || '#111827', // Neutral dark gray/black text
+        fontFamily: (theme.fonts && theme.fonts.regular) || 'System',
+        fontSize: (theme.fontSizes && theme.fontSizes.lg) || 18,
+        color: (theme.colors && theme.colors.textPrimary) || '#111827',
         fontWeight: '600',
         textAlign: 'center',
         lineHeight: 24,
