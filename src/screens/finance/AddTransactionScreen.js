@@ -93,7 +93,9 @@ const AddTransactionScreen = () => {
             const xpAmount = type === 'income' ? 10 : 2;
             
             await updateDoc(userRef, {
-                xp: increment(xpAmount)
+                xp: increment(xpAmount),
+                xpDiario: increment(xpAmount),
+                xpMensal: increment(xpAmount)
             });
             
             Alert.alert('Sucesso!', `Transação adicionada! Você ganhou +${xpAmount} XP.`, [

@@ -13,7 +13,9 @@ const MissionsScreen = ({ navigation }) => {
         try {
             const userRef = doc(db, 'users', auth.currentUser.uid);
             await updateDoc(userRef, {
-                xp: increment(points)
+                xp: increment(points),
+                xpDiario: increment(points),
+                xpMensal: increment(points)
             });
             alert(`Missão concluída! Você ganhou +${points} XP`);
             navigation.goBack();

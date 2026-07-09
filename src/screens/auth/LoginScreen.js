@@ -158,6 +158,10 @@ export default function LoginScreen({ route, navigation }) {
                         onboarding: onboardingData || {},
                         plan: 'Gratuito',
                         xp: 0,
+                        xpDiario: 0,
+                        xpMensal: 0,
+                        lastResetDiario: "",
+                        lastResetMensal: "",
                         level: 1,
                         createdAt: serverTimestamp()
                     });
@@ -193,6 +197,10 @@ export default function LoginScreen({ route, navigation }) {
                         onboarding: onboardingData,
                         plan: 'Gratuito',
                         xp: 0,
+                        xpDiario: 0,
+                        xpMensal: 0,
+                        lastResetDiario: "",
+                        lastResetMensal: "",
                         level: 1,
                         createdAt: serverTimestamp(),
                         provider: type
