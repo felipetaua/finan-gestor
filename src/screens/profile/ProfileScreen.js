@@ -30,6 +30,7 @@ import {
     arrayRemove 
 } from 'firebase/firestore';
 import LottieView from 'lottie-react-native';
+import * as Clipboard from 'expo-clipboard';
 
 const { width } = Dimensions.get('window');
 
@@ -140,6 +141,16 @@ const ProfileScreen = ({ navigation }) => {
 
     const userShortCode = user?.uid ? user.uid.substring(0, 6).toUpperCase() : 'XXXXXX';
 
+    const copyFriendCode = async () => {
+        try {
+            await Clipboard.setStringAsync(userShortCode);
+            Alert.alert("Código Copiado!", "Seu código de amigo foi copiado para a área de transferência!");
+        } catch (e) {
+            console.error("Erro ao copiar código:", e);
+            Alert.alert("Erro", "Não foi possível copiar o código.");
+        }
+    };
+
     // Abrir modal de busca de amigos
     const openSearchModal = async () => {
         setSearchModalVisible(true);
@@ -190,8 +201,6 @@ const ProfileScreen = ({ navigation }) => {
             await updateDoc(targetRef, {
                 followers: arrayUnion(user.uid)
             });
-            
-            Alert.alert("Sucesso!", `Você começou a seguir ${targetUser.name || 'Usuário'}!`);
         } catch (e) {
             console.error("Erro ao seguir usuário:", e);
             Alert.alert("Erro", "Não foi possível seguir o usuário.");
@@ -199,25 +208,38 @@ const ProfileScreen = ({ navigation }) => {
     };
 
     // Parar de Seguir Usuário
-    const handleUnfollowUser = async (targetUserId) => {
+    const handleUnfollowUser = async (targetUserId, targetUserName = 'este usuário') => {
         if (!user) return;
-        const myRef = doc(db, 'users', user.uid);
-        const targetRef = doc(db, 'users', targetUserId);
-        
-        try {
-            await updateDoc(myRef, {
-                following: arrayRemove(targetUserId)
-            });
-            await updateDoc(targetRef, {
-                followers: arrayRemove(user.uid)
-            });
-            
-            setFriendDetailModalVisible(false);
-            Alert.alert("Sucesso!", "Você parou de seguir o usuário.");
-        } catch (e) {
-            console.error("Erro ao parar de seguir usuário:", e);
-            Alert.alert("Erro", "Não foi possível realizar a ação.");
-        }
+
+        Alert.alert(
+            "Deixar de seguir",
+            `Tem certeza que deseja parar de seguir ${targetUserName}?`,
+            [
+                { text: "Cancelar", style: "cancel" },
+                { 
+                    text: "Sim, parar de seguir", 
+                    style: "destructive",
+                    onPress: async () => {
+                        const myRef = doc(db, 'users', user.uid);
+                        const targetRef = doc(db, 'users', targetUserId);
+                        
+                        try {
+                            await updateDoc(myRef, {
+                                following: arrayRemove(targetUserId)
+                            });
+                            await updateDoc(targetRef, {
+                                followers: arrayRemove(user.uid)
+                            });
+                            
+                            setFriendDetailModalVisible(false);
+                        } catch (e) {
+                            console.error("Erro ao parar de seguir usuário:", e);
+                            Alert.alert("Erro", "Não foi possível realizar a ação.");
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const openFriendDetailModal = (friend) => {
@@ -250,7 +272,11 @@ const ProfileScreen = ({ navigation }) => {
                 <View style={styles.content}>
                     <View style={styles.profileInfo}>
                         <Text style={styles.name}>{user?.displayName || 'Usuário Finan'}</Text>
-                        <Text style={styles.handle}>@{userShortCode} • Criado em {formattedDate}</Text>
+                        <TouchableOpacity onPress={copyFriendCode} activeOpacity={0.7} style={styles.handleContainer}>
+                            <Text style={styles.handle}>
+                                @{userShortCode} <Ionicons name="copy-outline" size={13} color="#666666" /> • Criado em {formattedDate}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Stats Summary */}
@@ -452,7 +478,7 @@ const ProfileScreen = ({ navigation }) => {
                                         {isFollowing ? (
                                             <TouchableOpacity 
                                                 style={styles.unfollowSearchButton}
-                                                onPress={() => handleUnfollowUser(item.id)}
+                                                onPress={() => handleUnfollowUser(item.id, item.name)}
                                             >
                                                 <Text style={styles.unfollowSearchButtonText}>Seguindo</Text>
                                             </TouchableOpacity>
@@ -515,7 +541,7 @@ const ProfileScreen = ({ navigation }) => {
 
                         <TouchableOpacity 
                             style={styles.unfollowActionButton}
-                            onPress={() => handleUnfollowUser(selectedFriend?.id)}
+                            onPress={() => handleUnfollowUser(selectedFriend?.id, selectedFriend?.name)}
                         >
                             <Ionicons name="person-remove" size={18} color="#EF4444" />
                             <Text style={styles.unfollowActionText}>Parar de Seguir</Text>
@@ -574,6 +600,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#666666',
         fontWeight: '500',
+    },
+    handleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
     },
     statsContainer: {
         flexDirection: 'row',
