@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Modal } from 'react-native';
+import LottieView from 'lottie-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -63,6 +64,9 @@ const MISSIONS_LIST = [
 const MissionsScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const [claimedMissions, setClaimedMissions] = useState([]);
+    const [showRewardModal, setShowRewardModal] = useState(false);
+    const [claimedPoints, setClaimedPoints] = useState(0);
+    const [claimedTitle, setClaimedTitle] = useState('');
     const [progress, setProgress] = useState({
         transactions: 0,
         create_challenge: 0,
@@ -163,7 +167,7 @@ const MissionsScreen = ({ navigation }) => {
         return unsubscribe;
     }, [navigation]);
 
-    const claimMission = async (missionId, points) => {
+    const claimMission = async (missionId, points, title) => {
         if (!auth.currentUser) return;
         try {
             const userRef = doc(db, 'users', auth.currentUser.uid);
@@ -174,7 +178,9 @@ const MissionsScreen = ({ navigation }) => {
                 claimedMissions: arrayUnion(missionId)
             });
             
-            Alert.alert("Parabéns! 🎉", `Você concluiu a missão e resgatou +${points} XP!`);
+            setClaimedPoints(points);
+            setClaimedTitle(title);
+            setShowRewardModal(true);
             setClaimedMissions(prev => [...prev, missionId]);
         } catch (error) {
             console.error("Erro ao resgatar pontos da missão: ", error);
@@ -234,7 +240,7 @@ const MissionsScreen = ({ navigation }) => {
                             {isCompleted ? (
                                 <TouchableOpacity 
                                     style={styles.claimButton} 
-                                    onPress={() => claimMission(item.id, item.points)}
+                                    onPress={() => claimMission(item.id, item.points, item.title)}
                                 >
                                     <Text style={styles.claimButtonText}>Resgatar</Text>
                                 </TouchableOpacity>
@@ -289,6 +295,42 @@ const MissionsScreen = ({ navigation }) => {
                     )}
                 />
             )}
+
+            {/* Modal de Recompensa da Missão */}
+            <Modal
+                visible={showRewardModal}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setShowRewardModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <LottieView
+                            source={require('../../assets/lottie/atv-success.json')}
+                            autoPlay
+                            loop={false}
+                            style={styles.modalAlertLottie}
+                        />
+                        <Text style={styles.modalTitle}>Missão Concluída! 🎉</Text>
+                        <Text style={styles.modalSubtitle}>
+                            Parabéns! Você concluiu a atividade:{"\n"}
+                            <Text style={styles.claimedTitleHighlight}>"{claimedTitle}"</Text>
+                        </Text>
+                        
+                        <View style={styles.rewardXPBadge}>
+                            <Text style={styles.rewardXPText}>+{claimedPoints} XP</Text>
+                        </View>
+
+                        <Text style={styles.modalDetailsText}>
+                            Seus pontos de XP foram computados e já estão valendo para os rankings Diário, Mensal e Geral. Continue assim!
+                        </Text>
+                        
+                        <TouchableOpacity style={styles.closeRewardButton} onPress={() => setShowRewardModal(false)}>
+                            <Text style={styles.closeRewardButtonText}>Sensacional!</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -463,6 +505,88 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#64748B',
         fontFamily: theme.fonts.medium,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: theme.spacing.lg,
+    },
+    modalContainer: {
+        width: '100%',
+        backgroundColor: '#FFF',
+        borderRadius: theme.radius.xl,
+        padding: theme.spacing.xl,
+        alignItems: 'center',
+        boxShadow: '0px 4px 10px rgba(0,0,0,0.15)',
+        elevation: 5,
+    },
+    modalAlertLottie: {
+        width: 150,
+        height: 150,
+        marginBottom: theme.spacing.md,
+    },
+    modalTitle: {
+        fontSize: theme.fontSizes.xl,
+        fontFamily: theme.fonts.title,
+        color: theme.colors.primary,
+        marginBottom: theme.spacing.sm,
+        textAlign: 'center',
+        fontWeight: 'bold',
+    },
+    modalSubtitle: {
+        fontSize: theme.fontSizes.md,
+        fontFamily: theme.fonts.regular,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        marginBottom: theme.spacing.md,
+        lineHeight: 22,
+    },
+    claimedTitleHighlight: {
+        fontFamily: theme.fonts.bold,
+        fontWeight: 'bold',
+        color: theme.colors.textPrimary,
+    },
+    rewardXPBadge: {
+        backgroundColor: '#10B981',
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.radius.full,
+        marginVertical: theme.spacing.md,
+        shadowColor: '#10B981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 3,
+    },
+    rewardXPText: {
+        color: '#FFFFFF',
+        fontFamily: theme.fonts.bold,
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    modalDetailsText: {
+        fontSize: theme.fontSizes.sm,
+        fontFamily: theme.fonts.regular,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: theme.spacing.xl,
+        paddingHorizontal: theme.spacing.md,
+    },
+    closeRewardButton: {
+        width: '100%',
+        backgroundColor: theme.colors.primary,
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.radius.lg,
+        alignItems: 'center',
+    },
+    closeRewardButtonText: {
+        color: '#FFF',
+        fontFamily: theme.fonts.bold,
+        fontSize: theme.fontSizes.md,
+        fontWeight: 'bold',
     }
 });
 
