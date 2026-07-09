@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Platform, Dimensions, Modal } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../theme/theme';
@@ -97,6 +98,18 @@ const AnalyticsScreen = () => {
         "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     ];
+
+    useEffect(() => {
+        const markVisited = async () => {
+            try {
+                const todayStr = new Date().toISOString().split('T')[0];
+                await AsyncStorage.setItem('@analytics_visited_today', todayStr);
+            } catch (e) {
+                console.error("Erro ao salvar visita ao analytics:", e);
+            }
+        };
+        markVisited();
+    }, []);
 
     useEffect(() => {
         if (!user) return;
