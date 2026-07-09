@@ -443,6 +443,7 @@ const styles = StyleSheet.create({
     emptyHint: {
         fontSize: 13,
         color: '#94A3B8',
+        alignItems: 'center',
     },
     modalOverlay: {
         flex: 1,
