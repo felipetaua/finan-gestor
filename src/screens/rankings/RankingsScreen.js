@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LottieView from 'lottie-react-native';
 import { theme } from '../../theme/theme';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../services/firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -14,6 +14,9 @@ const RankingsScreen = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('Todos'); // 'Diário', 'Mensal', 'Todos'
     const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+    const [showRewardModal, setShowRewardModal] = useState(false);
+    const [dailyPointsWon, setDailyPointsWon] = useState(0);
+    const [timeRemaining, setTimeRemaining] = useState('');
 
     useEffect(() => {
         const checkFirstAccess = async () => {
@@ -26,16 +29,132 @@ const RankingsScreen = ({ navigation }) => {
         checkFirstAccess();
     }, []);
 
+    // Verificação de Resets ao carregar a tela (Dia / Mês)
     useEffect(() => {
+        const checkResets = async () => {
+            if (!auth.currentUser) return;
+            const userRef = doc(db, 'users', auth.currentUser.uid);
+            
+            try {
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const currentMonthStr = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+                    
+                    let updates = {};
+                    let shouldShowModal = false;
+                    let earnedToday = userData.xpDiario || 0;
+
+                    // Inicialização se os campos estiverem ausentes
+                    if (userData.xpDiario === undefined) updates.xpDiario = 0;
+                    if (userData.xpMensal === undefined) updates.xpMensal = 0;
+                    if (userData.lastResetDiario === undefined) updates.lastResetDiario = todayStr;
+                    if (userData.lastResetMensal === undefined) updates.lastResetMensal = currentMonthStr;
+
+                    // Reset Diário (se a data salva for anterior a hoje e o usuário tiver XP acumulado)
+                    if (userData.lastResetDiario && userData.lastResetDiario !== todayStr) {
+                        if (earnedToday > 0) {
+                            setDailyPointsWon(earnedToday);
+                            shouldShowModal = true;
+                        }
+                        updates.xpDiario = 0;
+                        updates.lastResetDiario = todayStr;
+                    }
+
+                    // Reset Mensal
+                    if (userData.lastResetMensal && userData.lastResetMensal !== currentMonthStr) {
+                        updates.xpMensal = 0;
+                        updates.lastResetMensal = currentMonthStr;
+                    }
+
+                    // Atualizar Firestore se houver mudanças
+                    if (Object.keys(updates).length > 0) {
+                        await updateDoc(userRef, updates);
+                    }
+
+                    if (shouldShowModal) {
+                        setShowRewardModal(true);
+                    }
+                }
+            } catch (error) {
+                console.error("Erro ao verificar resets: ", error);
+            }
+        };
+        checkResets();
+    }, []);
+
+    // Cronômetro Regressivo para a Meia-Noite
+    useEffect(() => {
+        const updateTimer = () => {
+            const now = new Date();
+            const midnight = new Date(now);
+            midnight.setHours(24, 0, 0, 0); // Próxima meia-noite
+
+            const diffMs = midnight.getTime() - now.getTime();
+            
+            if (diffMs <= 1000) {
+                // Chegou na meia-noite, aciona o reset em tempo real
+                triggerDailyReset();
+            } else {
+                const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+                const pad = (n) => n < 10 ? `0${n}` : n;
+                setTimeRemaining(`${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`);
+            }
+        };
+
+        const triggerDailyReset = async () => {
+            if (!auth.currentUser) return;
+            const userRef = doc(db, 'users', auth.currentUser.uid);
+            
+            try {
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const earnedToday = userData.xpDiario || 0;
+                    
+                    if (earnedToday > 0) {
+                        setDailyPointsWon(earnedToday);
+                        setShowRewardModal(true);
+                    }
+
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    await updateDoc(userRef, {
+                        xpDiario: 0,
+                        lastResetDiario: todayStr
+                    });
+                }
+            } catch (error) {
+                console.error("Erro no reset diário em tempo real: ", error);
+            }
+        };
+
+        updateTimer();
+        const intervalId = setInterval(updateTimer, 1000);
+
+        return () => clearInterval(intervalId);
+    }, []);
+
+    // Consulta reativa baseada no filtro selecionado
+    useEffect(() => {
+        setLoading(true);
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, orderBy('xp', 'desc'), limit(50));
+        
+        let orderByField = 'xp';
+        if (filter === 'Diário') orderByField = 'xpDiario';
+        else if (filter === 'Mensal') orderByField = 'xpMensal';
+        
+        const q = query(usersRef, orderBy(orderByField, 'desc'), limit(50));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const usersData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
-            console.log("Users fetched: ", usersData.length);
+            console.log(`Users fetched for ${filter}: `, usersData.length);
             setUsers(usersData);
             setLoading(false);
         }, (error) => {
@@ -44,7 +163,7 @@ const RankingsScreen = ({ navigation }) => {
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [filter]);
 
     const topThree = users.slice(0, 3);
     const remainingUsers = users.slice(3);
@@ -75,7 +194,9 @@ const RankingsScreen = ({ navigation }) => {
                     </View>
                 </View>
                 <Text style={styles.topUserName} numberOfLines={1}>{user.name || 'Usuário'}</Text>
-                <Text style={styles.topUserPoints}>{user.xp || 0} pts</Text>
+                <Text style={styles.topUserPoints}>
+                    {(filter === 'Diário' ? user.xpDiario : filter === 'Mensal' ? user.xpMensal : user.xp) || 0} pts
+                </Text>
             </View>
         );
     };
@@ -99,7 +220,9 @@ const RankingsScreen = ({ navigation }) => {
                 <Text style={[styles.listName, isCurrentUser && styles.currentUserName]} numberOfLines={1}>
                     {item.name || 'Usuário'} {isCurrentUser ? '(Você)' : ''}
                 </Text>
-                <Text style={[styles.listPoints, isCurrentUser && styles.currentUserPoints]}>{item.xp || 0} pts</Text>
+                <Text style={[styles.listPoints, isCurrentUser && styles.currentUserPoints]}>
+                    {(filter === 'Diário' ? item.xpDiario : filter === 'Mensal' ? item.xpMensal : item.xp) || 0} pts
+                </Text>
             </View>
         );
     };
@@ -122,6 +245,15 @@ const RankingsScreen = ({ navigation }) => {
                     <Ionicons name="calendar-outline" size={28} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
             </View>
+
+            {timeRemaining ? (
+                <View style={styles.timerBanner}>
+                    <Ionicons name="stopwatch" size={18} color="#D97706" />
+                    <Text style={styles.timerText}>
+                        Reseta em: <Text style={styles.timerCountdown}>{timeRemaining}</Text>
+                    </Text>
+                </View>
+            ) : null}
 
             <View style={styles.filterContainer}>
                 {['Diário', 'Mensal', 'Todos'].map(f => (
@@ -163,6 +295,7 @@ const RankingsScreen = ({ navigation }) => {
                 </View>
             )}
 
+            {/* Modal de Boas-vindas */}
             <Modal
                 visible={showWelcomeModal}
                 animationType="fade"
@@ -184,6 +317,41 @@ const RankingsScreen = ({ navigation }) => {
                         
                         <TouchableOpacity style={styles.participateButton} onPress={handleParticipate}>
                             <Text style={styles.participateButtonText}>Quero Participar!</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal de Premiação Diária (Fim do Cronômetro) */}
+            <Modal
+                visible={showRewardModal}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setShowRewardModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <LottieView
+                            source={require('../../assets/lottie/screen-Trophy.json')}
+                            autoPlay
+                            loop
+                            style={styles.modalAlertLottie}
+                        />
+                        <Text style={styles.modalTitle}>Fim do Dia! 🕒</Text>
+                        <Text style={styles.modalSubtitle}>
+                            Parabéns! O cronômetro diário terminou e você acumulou:
+                        </Text>
+                        
+                        <View style={styles.rewardXPBadge}>
+                            <Text style={styles.rewardXPText}>+{dailyPointsWon} XP</Text>
+                        </View>
+
+                        <Text style={styles.modalDetailsText}>
+                            Seus pontos diários foram reiniciados para o novo dia. Continue participando das missões para subir no ranking!
+                        </Text>
+                        
+                        <TouchableOpacity style={styles.participateButton} onPress={() => setShowRewardModal(false)}>
+                            <Text style={styles.participateButtonText}>Continuar</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -459,6 +627,56 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontFamily: theme.fonts.bold,
         fontSize: theme.fontSizes.md,
+    },
+    timerBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+        borderWidth: 1,
+        borderRadius: theme.radius.md,
+        paddingVertical: 10,
+        marginHorizontal: theme.spacing.lg,
+        marginBottom: theme.spacing.md,
+        gap: 8,
+    },
+    timerText: {
+        fontFamily: theme.fonts.medium,
+        fontSize: theme.fontSizes.sm,
+        color: '#B45309',
+    },
+    timerCountdown: {
+        fontFamily: theme.fonts.bold,
+        fontWeight: 'bold',
+        color: '#D97706',
+    },
+    rewardXPBadge: {
+        backgroundColor: '#10B981',
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.radius.full,
+        marginVertical: theme.spacing.md,
+        shadowColor: '#10B981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 3,
+    },
+    rewardXPText: {
+        color: '#FFFFFF',
+        fontFamily: theme.fonts.bold,
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    modalDetailsText: {
+        fontSize: theme.fontSizes.sm,
+        fontFamily: theme.fonts.regular,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: theme.spacing.xl,
+        paddingHorizontal: theme.spacing.md,
     }
 });
 
