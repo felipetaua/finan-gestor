@@ -216,6 +216,37 @@ const HomeScreen = () => {
                             section={index + 1}
                             unit={section.unidades.length}
                             description={section.titulo}
+                            onPress={() => {
+                                const cleanTitle = section.titulo.includes(': ') 
+                                    ? section.titulo.split(': ')[1] 
+                                    : section.titulo;
+                                const sectionBanner = {
+                                    id: `section-${section.id}`,
+                                    title: `Seção ${index + 1}: ${cleanTitle}`,
+                                    subtitle: `${section.unidades.length} Unidades de aprendizado`,
+                                    color: index % 3 === 0 ? '#1CB0F6' : (index % 3 === 1 ? '#22C55E' : '#FF9600'),
+                                    detail: {
+                                        heading: section.titulo,
+                                        body: [
+                                            {
+                                                type: 'paragraph',
+                                                text: `Bem-vindo à Seção ${index + 1} da sua trilha de aprendizado financeiro. Esta seção aborda conceitos fundamentais sobre planejamento, economia, e atitudes práticas para alavancar suas conquistas financeiras.`
+                                            },
+                                            ...section.unidades.map((u, ui) => ({
+                                                type: 'section',
+                                                title: `Unidade ${ui + 1}: ${u.titulo}`,
+                                                text: `Complete as lições e atividades desta unidade para avançar no seu aprendizado, subir de nível no ranking e acumular recompensas!`
+                                            })),
+                                            {
+                                                type: 'tip',
+                                                label: 'Dica Prática',
+                                                text: 'Dê um passo de cada vez. A consistência diária é muito mais valiosa do que estudar horas acumuladas uma única vez!'
+                                            }
+                                        ]
+                                    }
+                                };
+                                navigation.navigate('BannerDetail', { banner: sectionBanner });
+                            }}
                         />
                         <View style={styles.trailContainer}>
                             {isFirstGroup && (
