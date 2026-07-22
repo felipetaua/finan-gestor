@@ -27,7 +27,7 @@ import { auth, db } from '../../services/firebaseConfig';
 import { doc, getDoc, onSnapshot, collection, query, where, orderBy, limit, updateDoc, increment } from 'firebase/firestore';
 import { useCurrency } from '../../hooks/useCurrency';
 
-const AnimatedSparklesButton = () => {
+const AnimatedSparklesButton = ({ onPress }) => {
   const rotation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -47,7 +47,7 @@ const AnimatedSparklesButton = () => {
   });
 
   return (
-    <TouchableOpacity style={styles.gradientButtonContainer} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.gradientButtonContainer} activeOpacity={0.8} onPress={onPress}>
       <Animated.View style={[styles.gradientBackground, { transform: [{ rotate }] }]}>
         <Svg height="120" width="120" viewBox="0 0 100 100">
           <Defs>
@@ -271,7 +271,7 @@ const FinanceScreen = () => {
             </View>
           </View>
           <View style={styles.headerIcons}>
-            {userPlan === 'Premium' && <AnimatedSparklesButton />}
+            <AnimatedSparklesButton onPress={() => navigation.navigate('AiChat')} />
             <TouchableOpacity style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={24} color="#000" />
             </TouchableOpacity>

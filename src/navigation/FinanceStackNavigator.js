@@ -8,6 +8,7 @@ import TransactionsScreen from '../screens/finance/TransactionsScreen';
 import AddChallengesScreen from '../screens/finance/AddChallengesScreen';
 import BannerDetailScreen from '../screens/finance/BannerDetailScreen';
 import PaymentsScreen from '../screens/finance/PaymentsScreen';
+import AiChatScreen from '../screens/finance/AiChatScreen';
 
 const Stack = createStackNavigator();
 
@@ -46,6 +47,7 @@ const FinanceStackNavigator = () => {
         <Stack.Screen name="AddChallenges" component={AddChallengesScreen} />
         <Stack.Screen name="BannerDetail" component={BannerDetailScreen} />
             <Stack.Screen name="Payments" component={PaymentsScreen} />
+            <Stack.Screen name="AiChat" component={AiChatScreen} />
         </Stack.Navigator>
     );
 };
