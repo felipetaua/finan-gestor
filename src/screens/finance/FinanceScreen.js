@@ -271,7 +271,33 @@ const FinanceScreen = () => {
             </View>
           </View>
           <View style={styles.headerIcons}>
-            <AnimatedSparklesButton onPress={() => navigation.navigate('AiChat')} />
+            <AnimatedSparklesButton 
+              onPress={() => navigation.navigate('AiChat', {
+                userProfile: {
+                  displayName: user?.displayName || 'Usuário Finan',
+                  email: user?.email,
+                  level: userLevel,
+                  xp: userXP,
+                  plan: userPlan
+                },
+                financialData: {
+                  totalBalance,
+                  transactions: transactions.map(t => ({
+                    description: t.description,
+                    amount: t.amount,
+                    type: t.type,
+                    category: t.categoryName || t.category || '',
+                    date: t.date ? new Date(t.date.seconds * 1000).toLocaleDateString('pt-BR') : null
+                  })),
+                  challenges: userChallenges.map(c => ({
+                    title: c.title,
+                    targetAmount: c.targetAmount,
+                    currentAmount: c.currentAmount,
+                    status: c.status
+                  }))
+                }
+              })} 
+            />
             <TouchableOpacity style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={24} color="#000" />
             </TouchableOpacity>

@@ -33,9 +33,12 @@ const POPULAR_TOPICS = [
     { label: 'Planejamento', prompt: 'Como fazer um planejamento financeiro básico para os próximos 6 meses?' },
 ];
 
-const AiChatScreen = () => {
+const AiChatScreen = ({ route }) => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
+    
+    // Obtém o contexto do usuário passado pela tela de finanças
+    const { userProfile, financialData } = route.params || {};
     
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
@@ -72,8 +75,8 @@ const AiChatScreen = () => {
         setLoading(true);
 
         try {
-            // Chama a API do Gemini enviando o histórico atual
-            const responseText = await generateGeminiResponse(text.trim(), messages);
+            // Chama a API do Gemini enviando o histórico atual e o contexto
+            const responseText = await generateGeminiResponse(text.trim(), messages, userProfile, financialData);
             
             const aiMessage = {
                 id: (Date.now() + 1).toString() + '-ai',
