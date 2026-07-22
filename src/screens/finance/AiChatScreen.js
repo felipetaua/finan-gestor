@@ -46,6 +46,7 @@ const AiChatScreen = ({ route }) => {
     
     const flatListRef = useRef(null);
     const welcomeFadeAnim = useRef(new Animated.Value(1)).current;
+    const typingTimerRef = useRef(null);
     
     // Auto scroll to bottom when messages change
     useEffect(() => {
@@ -53,6 +54,15 @@ const AiChatScreen = ({ route }) => {
             flatListRef.current?.scrollToEnd({ animated: true });
         }
     }, [messages]);
+
+    // Limpa qualquer timer ativo de digitação ao desmontar a tela
+    useEffect(() => {
+        return () => {
+            if (typingTimerRef.current) {
+                clearInterval(typingTimerRef.current);
+            }
+        };
+    }, []);
 
     const handleSend = async (textToSend) => {
         const text = textToSend || inputText;
@@ -78,15 +88,44 @@ const AiChatScreen = ({ route }) => {
             // Chama a API do Gemini enviando o histórico atual e o contexto
             const responseText = await generateGeminiResponse(text.trim(), messages, userProfile, financialData);
             
-            const aiMessage = {
-                id: (Date.now() + 1).toString() + '-ai',
-                text: responseText,
+            // Pequeno delay artificial de 600ms para simular a conclusão do raciocínio da IA
+            await new Promise(resolve => setTimeout(resolve, 600));
+            setLoading(false);
+            
+            const aiMessageId = (Date.now() + 1).toString() + '-ai';
+            const newAiMessage = {
+                id: aiMessageId,
+                text: '',
                 sender: 'ai',
                 timestamp: new Date()
             };
-
-            setMessages(prev => [...prev, aiMessage]);
+            
+            setMessages(prev => [...prev, newAiMessage]);
+            
+            // Transforma o texto em palavras para o efeito de digitação
+            const words = responseText.split(' ');
+            let currentText = '';
+            let wordIndex = 0;
+            
+            if (typingTimerRef.current) {
+                clearInterval(typingTimerRef.current);
+            }
+            
+            typingTimerRef.current = setInterval(() => {
+                if (wordIndex < words.length) {
+                    currentText += (wordIndex === 0 ? '' : ' ') + words[wordIndex];
+                    setMessages(prev => prev.map(msg => 
+                        msg.id === aiMessageId ? { ...msg, text: currentText } : msg
+                    ));
+                    wordIndex++;
+                } else {
+                    clearInterval(typingTimerRef.current);
+                    typingTimerRef.current = null;
+                }
+            }, 35); // 35ms por palavra cria uma animação muito suave e de velocidade natural
+            
         } catch (error) {
+            setLoading(false);
             console.warn("Erro ao buscar resposta do Gemini:", error);
             const errorMessage = {
                 id: (Date.now() + 1).toString() + '-ai-error',
@@ -96,8 +135,6 @@ const AiChatScreen = ({ route }) => {
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMessage]);
-        } finally {
-            setLoading(false);
         }
     };
 
