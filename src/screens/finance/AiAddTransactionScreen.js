@@ -76,7 +76,7 @@ const AiAddTransactionScreen = () => {
     return (
         <KeyboardAvoidingView 
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
         >
             <TouchableOpacity 
                 style={styles.backdrop} 
