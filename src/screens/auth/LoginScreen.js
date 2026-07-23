@@ -73,13 +73,11 @@ export default function LoginScreen({ route, navigation }) {
             // o que causa rejeição do Google por incompatibilidade de pacote (Expo Go vs com.example.finan).
             androidClientId: isExpoGo ? undefined : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
             webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-            // No Expo Go, usamos o makeRedirectUri com useProxy para incluir os metadados do servidor local.
-            // No APK instalado final (APK), usamos o makeRedirectUri tradicional com o esquema finan:// nativo.
-            redirectUri: makeRedirectUri({
-                scheme: 'finan',
-                projectNameForProxy: isExpoGo ? '@felipetaua/FINAN' : undefined,
-                useProxy: isExpoGo,
-            }),
+            // No Expo Go, usamos a string direta para que o Google receba a URL HTTPS correta.
+            // No APK final (APK), usamos o makeRedirectUri tradicional com o esquema finan:// nativo.
+            redirectUri: isExpoGo 
+                ? 'https://auth.expo.io/@felipetaua/FINAN' 
+                : makeRedirectUri({ scheme: 'finan' }),
         },
         // Segundo argumento: Opções do provedor de autenticação (necessário para o Proxy funcionar no Expo Go)
         isExpoGo ? { useProxy: true, projectNameForProxy: '@felipetaua/FINAN' } : undefined
@@ -118,17 +116,79 @@ export default function LoginScreen({ route, navigation }) {
         }
     }, [response]);
 
-    const fetchGoogleUserInfoHandler = async (accessToken) => {
+    const fetchGoogleUserInfoHandler = async (token) => {
         try {
-            const data = await fetchGoogleUserInfo(accessToken);
-            console.log("Dados do usuário Google:", data);
-
-            // Usar o accessToken para criar credential Firebase
-            const credential = GoogleAuthProvider.credential(null, accessToken);
-            handleFirebaseSocialLogin(credential, 'google');
+            const userInfo = await fetchGoogleUserInfo(token);
+            console.log("Informações do usuário obtidas com sucesso do Google!");
+            await handleFirebaseSocialLogin('google', userInfo);
         } catch (error) {
-            console.error("Erro ao buscar informações do usuário:", error);
-            Alert.alert("Erro", "Não foi possível obter informações da conta Google.");
+            console.error("Erro ao obter dados do usuário do Google:", error);
+            Alert.alert("Erro", "Não foi possível obter os dados do seu perfil do Google.");
+        }
+    };
+
+    const handleFirebaseSocialLogin = async (type, userInfo) => {
+        try {
+            const email = userInfo.email;
+            const name = userInfo.name;
+            const photoUrl = userInfo.picture;
+            const providerId = userInfo.id;
+
+            // Criar credencial de autenticação
+            const credential = GoogleAuthProvider.credential(null, userInfo.idToken);
+            
+            // Tentar login com o Firebase usando o token de acesso obtido
+            const credentialGoogle = GoogleAuthProvider.credential(null, tokenGoogleFix(userInfo, response));
+            const userCredential = await signInWithCredential(auth, credentialGoogle);
+            const user = userCredential.user;
+
+            console.log("Firebase login social efetuado:", user.uid);
+
+            // Verificar se o documento do usuário já existe no Firestore
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (!userDocSnap.exists()) {
+                console.log("Criando novo documento do usuário pós login social...");
+                // Se for novo usuário, salvar os dados iniciais
+                await setDoc(userDocRef, {
+                    name: name || user.displayName || 'Usuário Finan',
+                    email: email || user.email,
+                    photoUrl: photoUrl || user.photoURL || '',
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                    isPremium: false,
+                    onboardingCompleted: false
+                });
+            }
+
+            // Seguir fluxo de Onboarding ou Home
+            checkOnboardingAndNavigate(user.uid);
+        } catch (error) {
+            console.error(`Erro no login com ${type}:`, error);
+            Alert.alert("Erro", "Ocorreu um problema ao vincular sua conta.");
+        }
+    };
+
+    // Helper para extrair credenciais corretas do Firebase
+    const tokenGoogleFix = (userInfo, resp) => {
+        // Se viemos do AuthSession, usamos o idToken ou a credencial implícita
+        return resp?.authentication?.idToken || resp?.authentication?.accessToken;
+    };
+
+    const handleSocialLogin = async (type) => {
+        console.log("handleSocialLogin chamado com tipo:", type);
+        if (type === 'google') {
+            try {
+                console.log("Iniciando promptAsync do Google nativo...");
+                const result = await promptAsync();
+                console.log("Resultado promptAsync Google:", result?.type);
+            } catch (error) {
+                console.error("Erro ao abrir login do Google:", error);
+                Alert.alert("Erro", "Não foi possível abrir o login do Google.");
+            }
+        } else if (type === 'phone') {
+            navigation.navigate('PhoneAuth');
         }
     };
 
@@ -200,79 +260,6 @@ export default function LoginScreen({ route, navigation }) {
         } catch (error) {
             console.error("Erro no handleContinue:", error);
             Alert.alert("Erro de Autenticação", error.message || "Não foi possível realizar a operação.");
-        }
-    };
-
-    const handleFirebaseSocialLogin = async (credential, type) => {
-        try {
-            const result = await signInWithCredential(auth, credential);
-            if (result.user) {
-                const userRef = doc(db, "users", result.user.uid);
-                const userSnap = await getDoc(userRef);
-
-                if (!userSnap.exists()) {
-                    await setDoc(userRef, {
-                        name: result.user.displayName,
-                        email: result.user.email,
-                        onboarding: onboardingData,
-                        plan: 'Gratuito',
-                        xp: 0,
-                        xpDiario: 0,
-                        xpMensal: 0,
-                        lastResetDiario: "",
-                        lastResetMensal: "",
-                        level: 1,
-                        createdAt: serverTimestamp(),
-                        provider: type
-                    });
-                }
-            }
-        } catch (error) {
-            console.error(`Erro no login com ${type}:`, error);
-            Alert.alert("Erro", "Ocorreu um problema ao vincular sua conta.");
-        }
-    };
-
-    const handleSocialLogin = async (type) => {
-        console.log("handleSocialLogin chamado com tipo:", type);
-        if (type === 'google') {
-            try {
-                if (isExpoGo) {
-                    console.log("Iniciando login Google no Expo Go via AuthSession.startAsync...");
-                    const redirectUrl = AuthSession.getRedirectUrl({ projectNameForProxy: '@felipetaua/FINAN' });
-                    console.log("Redirect URL do proxy gerada:", redirectUrl);
-                    
-                    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-                        `client_id=${process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}` +
-                        `&redirect_uri=${encodeURIComponent(redirectUrl)}` +
-                        `&response_type=token` +
-                        `&scope=${encodeURIComponent('profile email')}`;
-                        
-                    const result = await AuthSession.startAsync({ authUrl });
-                    console.log("Resultado do AuthSession.startAsync:", result?.type);
-                    
-                    if (result?.type === 'success') {
-                        const accessToken = result.params?.access_token;
-                        if (accessToken) {
-                            fetchGoogleUserInfoHandler(accessToken);
-                        } else {
-                            Alert.alert("Erro", "Não foi possível extrair o token do Google da resposta.");
-                        }
-                    } else if (result?.type === 'error') {
-                        console.error("Erro no AuthSession.startAsync:", result.error);
-                        Alert.alert("Erro", "Erro ao autenticar com o Google.");
-                    }
-                } else {
-                    console.log("Iniciando promptAsync do Google nativo...");
-                    const result = await promptAsync();
-                    console.log("Resultado promptAsync Google:", result?.type);
-                }
-            } catch (error) {
-                console.error("Erro ao abrir login do Google:", error);
-                Alert.alert("Erro", "Não foi possível abrir o login do Google.");
-            }
-        } else if (type === 'phone') {
-            navigation.navigate('PhoneAuth');
         }
     };
 
