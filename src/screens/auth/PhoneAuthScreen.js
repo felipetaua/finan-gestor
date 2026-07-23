@@ -173,6 +173,8 @@ export default function PhoneAuthScreen({ navigation }) {
                 errorMessage = "Erro de rede. Verifique se o seu celular tem internet e se as chaves do Firebase estão corretas.";
             } else if (err.code === 'auth/invalid-phone-number') {
                 errorMessage = "Número de telefone inválido. Verifique o formato.";
+            } else if (err.code === 'auth/billing-not-enabled') {
+                errorMessage = "O envio de SMS exige o plano Blaze (faturamento ativo) no Firebase. Para testar gratuitamente em desenvolvimento, adicione seu número de telefone e um código fixo nas configurações de números de teste no Console do Firebase (Authentication > Sign-in method > Phone).";
             }
             Alert.alert("Erro", `Não foi possível enviar o código: ${errorMessage}`);
         } finally {
