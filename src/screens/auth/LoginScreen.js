@@ -77,7 +77,7 @@ export default function LoginScreen({ route, navigation }) {
             // No APK final (APK), usamos o makeRedirectUri tradicional com o esquema finan:// nativo.
             redirectUri: isExpoGo 
                 ? 'https://auth.expo.io/@felipetaua/FINAN' 
-                : makeRedirectUri({ scheme: 'finan' }),
+                : makeRedirectUri({ scheme: 'com.example.finan' }),
         },
         // Segundo argumento: Opções do provedor de autenticação (necessário para o Proxy funcionar no Expo Go)
         isExpoGo ? { useProxy: true, projectNameForProxy: '@felipetaua/FINAN' } : undefined
