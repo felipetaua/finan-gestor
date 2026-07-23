@@ -19,6 +19,7 @@ import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useOnboarding } from '../../hooks/useOnboarding';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import { makeRedirectUri } from 'expo-auth-session';
 import { fetchGoogleUserInfo } from '../../api/endpoints/authApi';
 import Constants from 'expo-constants';
@@ -236,11 +237,38 @@ export default function LoginScreen({ route, navigation }) {
         console.log("handleSocialLogin chamado com tipo:", type);
         if (type === 'google') {
             try {
-                console.log("Iniciando promptAsync do Google...");
-                const result = await promptAsync();
-                console.log("Resultado promptAsync Google:", result?.type);
+                if (isExpoGo) {
+                    console.log("Iniciando login Google no Expo Go via AuthSession.startAsync...");
+                    const redirectUrl = AuthSession.getRedirectUrl();
+                    console.log("Redirect URL do proxy gerada:", redirectUrl);
+                    
+                    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                        `client_id=${process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}` +
+                        `&redirect_uri=${encodeURIComponent(redirectUrl)}` +
+                        `&response_type=token` +
+                        `&scope=${encodeURIComponent('profile email')}`;
+                        
+                    const result = await AuthSession.startAsync({ authUrl });
+                    console.log("Resultado do AuthSession.startAsync:", result?.type);
+                    
+                    if (result?.type === 'success') {
+                        const accessToken = result.params?.access_token;
+                        if (accessToken) {
+                            fetchGoogleUserInfoHandler(accessToken);
+                        } else {
+                            Alert.alert("Erro", "Não foi possível extrair o token do Google da resposta.");
+                        }
+                    } else if (result?.type === 'error') {
+                        console.error("Erro no AuthSession.startAsync:", result.error);
+                        Alert.alert("Erro", "Erro ao autenticar com o Google.");
+                    }
+                } else {
+                    console.log("Iniciando promptAsync do Google nativo...");
+                    const result = await promptAsync();
+                    console.log("Resultado promptAsync Google:", result?.type);
+                }
             } catch (error) {
-                console.error("Erro ao abrir prompt do Google:", error);
+                console.error("Erro ao abrir login do Google:", error);
                 Alert.alert("Erro", "Não foi possível abrir o login do Google.");
             }
         } else if (type === 'phone') {
