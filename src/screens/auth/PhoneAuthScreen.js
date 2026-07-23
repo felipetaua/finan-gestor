@@ -10,6 +10,7 @@ import { PhoneAuthProvider, signInWithCredential } from "firebase/auth";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useOnboarding } from '../../hooks/useOnboarding';
 import { fetchCountriesApi } from '../../api/endpoints/countriesApi';
+import FirebaseRecaptchaVerifierModal from '../../components/auth/FirebaseRecaptchaVerifierModal';
 
 export default function PhoneAuthScreen({ navigation }) {
     const insets = useSafeAreaInsets();
@@ -152,10 +153,8 @@ export default function PhoneAuthScreen({ navigation }) {
             const phoneProvider = new PhoneAuthProvider(auth);
             const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/\D/g, '')}`;
             
-            // O componente recaptchaVerifier foi removido porque expo-firebase-recaptcha é obsoleto (unblock build)
-            // Para consertar, migre para @react-native-firebase/auth no seu projeto Expo.
             if (!recaptchaVerifier.current) {
-                Alert.alert("Erro Técnico", "O Verificador de reCAPTCHA não está pronto. No SDK 50+, use React Native Firebase para login por telefone.");
+                Alert.alert("Erro de Sistema", "O Verificador de segurança reCAPTCHA não pôde ser inicializado. Reinicie o aplicativo.");
                 setLoading(false);
                 return;
             }
@@ -292,18 +291,12 @@ export default function PhoneAuthScreen({ navigation }) {
                     )}
                 </View>
 
-                {/* 
-                  O componente FirebaseRecaptchaVerifierModal foi removido por ser obsoleto 
-                  no SDK 48+. Para usar Phone Auth no Expo moderno, recomendo migrar para
-                  @react-native-firebase/auth ou usar um sistema customizado de WebView.
-                */}
-                {/* {Platform.OS !== 'web' && (
+                {Platform.OS !== 'web' && (
                     <FirebaseRecaptchaVerifierModal
                         ref={recaptchaVerifier}
                         firebaseConfig={auth.app.options}
-                        attemptInvisibleVerification={true}
                     />
-                )} */}
+                )}
 
                 <Modal
                     visible={isCountryModalVisible}
