@@ -2,12 +2,18 @@ import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { theme } from '../../theme/theme';
 import Button from '../../components/common/Button';
+import WelcomeSvg from '../../assets/images/welcome.svg';
 
 export default function WelcomeScreen({ navigation }) {
     return (
         <View style={styles.container}>
+            {/* <WelcomeSvg
+                width="100%"
+                height="45%"
+                style={styles.imageScreen}
+            /> */}
             <Image
-                source={require('../../assets/images/splashart.png')}
+                source={require('../../assets/images/splashscreen.png')}
                 style={styles.imageScreen}
                 resizeMode="contain"
             />
@@ -40,16 +46,17 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 18,
     },
     imageScreen: {
         width: 600, 
+        width: "100%",
         height: "45%",
     },
     content: {
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
+        paddingHorizontal: 18,
         paddingBottom: 25,
     },
     title: {
