@@ -180,9 +180,58 @@ export default function LoginScreen({ route, navigation }) {
         console.log("handleSocialLogin chamado com tipo:", type);
         if (type === 'google') {
             try {
-                console.log("Iniciando promptAsync do Google nativo...");
-                const result = await promptAsync();
-                console.log("Resultado promptAsync Google:", result?.type);
+                if (isExpoGo) {
+                    console.log("Iniciando login Google no Expo Go via fluxo manual de proxy...");
+                    
+                    // 1. URL de retorno local (Ex: exp://192.168.x.x:8081/--/expo-auth-session)
+                    const localReturnUrl = makeRedirectUri({
+                        scheme: 'finan',
+                    });
+                    console.log("Local Return URL:", localReturnUrl);
+                    
+                    // 2. URL de autorização do Google apontando para o proxy como redirect_uri
+                    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                        `client_id=${process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}` +
+                        `&redirect_uri=${encodeURIComponent('https://auth.expo.io/@felipetaua/FINAN')}` +
+                        `&response_type=token` +
+                        `&scope=${encodeURIComponent('profile email')}`;
+                    
+                    // 3. URL de início do proxy que registra o returnUrl local e joga para o Google
+                    const proxyStartUrl = `https://auth.expo.io/@felipetaua/FINAN/start?` +
+                        `authUrl=${encodeURIComponent(googleAuthUrl)}` +
+                        `&returnUrl=${encodeURIComponent(localReturnUrl)}`;
+                    
+                    console.log("Abrindo navegador com proxyStartUrl...");
+                    const result = await WebBrowser.openAuthSessionAsync(proxyStartUrl, localReturnUrl);
+                    console.log("Resultado do navegador:", result.type);
+                    
+                    if (result.type === 'success' && result.url) {
+                        // Extrai os parâmetros retornados na URL (access_token)
+                        const params = {};
+                        const hashOrSearch = result.url.includes('#') ? result.url.split('#')[1] : (result.url.includes('?') ? result.url.split('?')[1] : '');
+                        if (hashOrSearch) {
+                            const parts = hashOrSearch.split('&');
+                            for (const part of parts) {
+                                const [key, value] = part.split('=');
+                                if (key && value) {
+                                    params[key] = decodeURIComponent(value);
+                                }
+                            }
+                        }
+                        
+                        const accessToken = params.access_token;
+                        if (accessToken) {
+                            console.log("Token obtido via proxy manual!");
+                            fetchGoogleUserInfoHandler(accessToken);
+                        } else {
+                            Alert.alert("Erro", "Não foi possível extrair o token do Google.");
+                        }
+                    }
+                } else {
+                    console.log("Iniciando promptAsync do Google nativo...");
+                    const result = await promptAsync();
+                    console.log("Resultado promptAsync Google:", result?.type);
+                }
             } catch (error) {
                 console.error("Erro ao abrir login do Google:", error);
                 Alert.alert("Erro", "Não foi possível abrir o login do Google.");
