@@ -21,6 +21,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
 import { fetchGoogleUserInfo } from '../../api/endpoints/authApi';
+import Constants from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -46,8 +47,15 @@ export default function LoginScreen({ route, navigation }) {
         }
     }, [route.params?.mode]);
 
-    // Selecionar o client ID correto baseado na plataforma
+    // Detecta se está rodando no aplicativo Expo Go
+    const isExpoGo = Constants.appOwnership === 'expo';
+
+    // Selecionar o client ID correto baseado na plataforma e no ambiente (Expo Go vs APK Nativo)
     const getClientId = () => {
+        if (isExpoGo) {
+            // No Expo Go, precisamos usar obrigatoriamente o Web Client ID para todas as plataformas
+            return process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+        }
         if (Platform.OS === 'web') {
             return process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
         } else if (Platform.OS === 'android') {
@@ -58,11 +66,16 @@ export default function LoginScreen({ route, navigation }) {
 
     const [request, response, promptAsync] = Google.useAuthRequest({
         clientId: getClientId(),
-        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+        // IMPORTANTE: Evitamos passar androidClientId no Expo Go.
+        // Se passarmos, a biblioteca expo-auth-session ignora o clientId e força o ID Android nativo,
+        // o que causa rejeição do Google por incompatibilidade de pacote (Expo Go vs com.example.finan).
+        androidClientId: isExpoGo ? undefined : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-        redirectUri: makeRedirectUri({
-            scheme: 'finan',
-        }),
+        // No Expo Go, usamos diretamente a URL do Proxy HTTPS da Expo como string para não gerar o 'exp://'.
+        // No APK instalado final (APK), usamos o makeRedirectUri com o esquema finan:// nativo.
+        redirectUri: isExpoGo 
+            ? 'https://auth.expo.io/@felipetaua/FINAN' 
+            : makeRedirectUri({ scheme: 'finan' }),
     });
 
     useEffect(() => {

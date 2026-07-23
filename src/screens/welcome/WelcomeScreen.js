@@ -2,16 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { theme } from '../../theme/theme';
 import Button from '../../components/common/Button';
-import WelcomeSvg from '../../assets/images/welcome.svg';
 
 export default function WelcomeScreen({ navigation }) {
     return (
         <View style={styles.container}>
-            {/* <WelcomeSvg
-                width="100%"
-                height="45%"
-                style={styles.imageScreen}
-            /> */}
+
             <Image
                 source={require('../../assets/images/splashscreen.png')}
                 style={styles.imageScreen}
