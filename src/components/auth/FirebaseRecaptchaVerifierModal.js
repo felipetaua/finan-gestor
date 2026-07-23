@@ -18,6 +18,15 @@ const FirebaseRecaptchaVerifierModal = forwardRef(({ firebaseConfig, onVerify },
                 setVisible(true);
                 setLoading(true);
             });
+        },
+        _reset: () => {
+            console.log("reCAPTCHA verifier _reset chamado pelo Firebase.");
+        },
+        reset: () => {
+            console.log("reCAPTCHA verifier reset chamado.");
+        },
+        clear: () => {
+            console.log("reCAPTCHA verifier clear chamado.");
         }
     }));
 
