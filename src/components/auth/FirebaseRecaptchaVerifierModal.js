@@ -59,8 +59,8 @@ const FirebaseRecaptchaVerifierModal = forwardRef(({ firebaseConfig, onVerify },
         }
     };
 
-    const projectId = firebaseConfig?.projectId;
-    const baseUrl = projectId ? `https://${projectId}.firebaseapp.com` : 'https://localhost';
+    const authDomain = firebaseConfig?.authDomain;
+    const baseUrl = authDomain ? `https://${authDomain}` : 'https://localhost';
 
     const htmlContent = `
         <!DOCTYPE html>
@@ -84,29 +84,56 @@ const FirebaseRecaptchaVerifierModal = forwardRef(({ firebaseConfig, onVerify },
                     align-items: center;
                 }
             </style>
-            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-            <script>
-                function onSuccess(token) {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'success', token: token }));
-                }
-                function onError() {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: 'Erro ao carregar o reCAPTCHA' }));
-                }
-                function onExpired() {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: 'O reCAPTCHA expirou' }));
-                }
-            </script>
+            <!-- Carrega o Firebase JS SDK V8 (Compat) -->
+            <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+            <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
         </head>
         <body>
-            <div id="recaptcha-container">
-                <div 
-                    class="g-recaptcha" 
-                    data-sitekey="6LcM2ksUAAAAAF081t9wA5Mlh9yVCR19O-N3U7oV" 
-                    data-callback="onSuccess"
-                    data-expired-callback="onExpired"
-                    data-error-callback="onError"
-                ></div>
-            </div>
+            <div id="recaptcha-container"></div>
+            
+            <script>
+                function onVerify(token) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'success',
+                        token: token
+                    }));
+                }
+                function onExpired() {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'error',
+                        message: 'O reCAPTCHA expirou'
+                    }));
+                }
+                function onError(error) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'error',
+                        message: error ? error.message : 'Erro no reCAPTCHA'
+                    }));
+                }
+
+                try {
+                    // Inicializa o Firebase no contexto web
+                    firebase.initializeApp(${JSON.stringify(firebaseConfig)});
+                    
+                    window.onload = function() {
+                        var options = {
+                            size: 'normal',
+                            callback: onVerify,
+                            'expired-callback': onExpired,
+                            'error-callback': onError
+                        };
+                        
+                        // Cria o verifador oficial do Firebase
+                        var verifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', options);
+                        
+                        verifier.render().then(function(widgetId) {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'load' }));
+                        }).catch(onError);
+                    };
+                } catch (e) {
+                    onError(e);
+                }
+            </script>
         </body>
         </html>
     `;
