@@ -64,19 +64,25 @@ export default function LoginScreen({ route, navigation }) {
         return process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     };
 
-    const [request, response, promptAsync] = Google.useAuthRequest({
-        clientId: getClientId(),
-        // IMPORTANTE: Evitamos passar androidClientId no Expo Go.
-        // Se passarmos, a biblioteca expo-auth-session ignora o clientId e força o ID Android nativo,
-        // o que causa rejeição do Google por incompatibilidade de pacote (Expo Go vs com.example.finan).
-        androidClientId: isExpoGo ? undefined : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-        // No Expo Go, usamos diretamente a URL do Proxy HTTPS da Expo como string para não gerar o 'exp://'.
-        // No APK instalado final (APK), usamos o makeRedirectUri com o esquema finan:// nativo.
-        redirectUri: isExpoGo 
-            ? 'https://auth.expo.io/@felipetaua/FINAN' 
-            : makeRedirectUri({ scheme: 'finan' }),
-    });
+    const [request, response, promptAsync] = Google.useAuthRequest(
+        {
+            clientId: getClientId(),
+            // IMPORTANTE: Evitamos passar androidClientId no Expo Go.
+            // Se passarmos, a biblioteca expo-auth-session ignora o clientId e força o ID Android nativo,
+            // o que causa rejeição do Google por incompatibilidade de pacote (Expo Go vs com.example.finan).
+            androidClientId: isExpoGo ? undefined : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+            webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+            // No Expo Go, usamos o makeRedirectUri com useProxy para incluir os metadados do servidor local.
+            // No APK instalado final (APK), usamos o makeRedirectUri tradicional com o esquema finan:// nativo.
+            redirectUri: makeRedirectUri({
+                scheme: 'finan',
+                projectNameForProxy: isExpoGo ? '@felipetaua/FINAN' : undefined,
+                useProxy: isExpoGo,
+            }),
+        },
+        // Segundo argumento: Opções do provedor de autenticação (necessário para o Proxy funcionar no Expo Go)
+        isExpoGo ? { useProxy: true, projectNameForProxy: '@felipetaua/FINAN' } : undefined
+    );
 
     useEffect(() => {
         if (request) {
