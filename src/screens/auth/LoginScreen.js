@@ -22,7 +22,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as AuthSession from 'expo-auth-session';
 import { makeRedirectUri } from 'expo-auth-session';
 import { fetchGoogleUserInfo } from '../../api/endpoints/authApi';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -40,6 +40,12 @@ export default function LoginScreen({ route, navigation }) {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
+    // Estados de validação local e feedback visual
+    const [nameError, setNameError] = useState(false);
+    const [emailError, setEmailError] = useState(false);
+    const [passwordError, setPasswordError] = useState(false);
+    const [validationMessage, setValidationMessage] = useState('');
+
     useEffect(() => {
         if (route.params?.mode === 'signup') {
             setIsLogin(false);
@@ -48,8 +54,9 @@ export default function LoginScreen({ route, navigation }) {
         }
     }, [route.params?.mode]);
 
+
     // Detecta se está rodando no aplicativo Expo Go
-    const isExpoGo = Constants.appOwnership === 'expo';
+    const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
     // Selecionar o client ID correto baseado na plataforma e no ambiente (Expo Go vs APK Nativo)
     const getClientId = () => {
@@ -258,17 +265,46 @@ export default function LoginScreen({ route, navigation }) {
         errorSignIn,
     ] = useSignInWithEmailAndPassword(auth);
 
+    // Monitora erros do Firebase e destaca os campos correspondentes
+    useEffect(() => {
+        const error = isLogin ? errorSignIn : errorCreate;
+        if (error) {
+            const code = error.code || '';
+            if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+                setPasswordError(true);
+            } else if (code === 'auth/user-not-found' || code === 'auth/invalid-email' || code === 'auth/email-already-in-use') {
+                setEmailError(true);
+            } else if (code === 'auth/weak-password') {
+                setPasswordError(true);
+            }
+        }
+    }, [errorSignIn, errorCreate, isLogin]);
+
     const handleContinue = async () => {
         console.log("handleContinue chamado. isLogin:", isLogin);
-        if (!email || !password) {
-            console.log("Email ou senha vazios");
-            Alert.alert("Erro", "Por favor, preencha email e senha.");
-            return;
+        
+        setNameError(false);
+        setEmailError(false);
+        setPasswordError(false);
+        setValidationMessage('');
+
+        let hasFailed = false;
+
+        if (!email) {
+            setEmailError(true);
+            hasFailed = true;
+        }
+        if (!password) {
+            setPasswordError(true);
+            hasFailed = true;
+        }
+        if (!isLogin && !name) {
+            setNameError(true);
+            hasFailed = true;
         }
 
-        if (!isLogin && !name) {
-            console.log("Nome vazio no cadastro");
-            Alert.alert("Erro", "Por favor, preencha seu nome.");
+        if (hasFailed) {
+            setValidationMessage('Por favor, preencha todos os campos obrigatórios.');
             return;
         }
 
@@ -373,20 +409,23 @@ export default function LoginScreen({ route, navigation }) {
                         <Input
                             placeholder="Nome Completo"
                             value={name}
-                            onChangeText={setName}
+                            onChangeText={(txt) => { setName(txt); setNameError(false); setValidationMessage(''); }}
+                            hasError={nameError}
                         />
                     )}
                     <Input
                         placeholder="Email"
                         value={email}
-                        onChangeText={setEmail}
+                        onChangeText={(txt) => { setEmail(txt); setEmailError(false); setValidationMessage(''); }}
                         keyboardType="email-address"
+                        hasError={emailError}
                     />
                     <Input
                         placeholder="Senha"
                         value={password}
-                        onChangeText={setPassword}
+                        onChangeText={(txt) => { setPassword(txt); setPasswordError(false); setValidationMessage(''); }}
                         secureTextEntry={!showPassword}
+                        hasError={passwordError}
                         rightIcon={
                             <Ionicons
                                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -397,7 +436,9 @@ export default function LoginScreen({ route, navigation }) {
                         onRightIconPress={() => setShowPassword((prev) => !prev)}
                     />
 
-                    {errorCreate || errorSignIn ? (
+                    {validationMessage ? (
+                        <Text style={styles.errorText}>{validationMessage}</Text>
+                    ) : (errorCreate || errorSignIn) ? (
                         <Text style={styles.errorText}>
                             {getAuthErrorMessage()}
                         </Text>
