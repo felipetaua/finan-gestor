@@ -239,7 +239,7 @@ export default function LoginScreen({ route, navigation }) {
             try {
                 if (isExpoGo) {
                     console.log("Iniciando login Google no Expo Go via AuthSession.startAsync...");
-                    const redirectUrl = AuthSession.getRedirectUrl();
+                    const redirectUrl = AuthSession.getRedirectUrl({ projectNameForProxy: '@felipetaua/FINAN' });
                     console.log("Redirect URL do proxy gerada:", redirectUrl);
                     
                     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
