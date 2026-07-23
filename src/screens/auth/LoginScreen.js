@@ -171,9 +171,6 @@ export default function LoginScreen({ route, navigation }) {
                     onboardingCompleted: false
                 });
             }
-
-            // Seguir fluxo de Onboarding ou Home
-            checkOnboardingAndNavigate(user.uid);
         } catch (error) {
             console.error(`Erro no login com ${type}:`, error);
             Alert.alert("Erro", "Ocorreu um problema ao vincular sua conta.");
