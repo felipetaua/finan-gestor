@@ -61,7 +61,7 @@ const AddTransactionScreen = () => {
     const [details, setDetails] = useState('');
     const isSubmittingRef = useRef(false);
 
-    // Estados para Data Customizada
+    // Estados para Data Customizada (recarrega HMR)
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [isCalendarVisible, setIsCalendarVisible] = useState(false);
 
