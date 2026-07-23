@@ -134,6 +134,15 @@ const FirebaseRecaptchaVerifierModal = forwardRef(({ firebaseConfig, onVerify },
                             onLoadEnd={() => setLoading(false)}
                             javaScriptEnabled={true}
                             domStorageEnabled={true}
+                            originWhitelist={['*']}
+                            mixedContentMode="always"
+                            userAgent="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
+                            onConsoleMessage={(event) => {
+                                console.log('reCAPTCHA WebView Console:', event.nativeEvent.message);
+                            }}
+                            onError={(event) => {
+                                console.error('reCAPTCHA WebView Load Error:', event.nativeEvent);
+                            }}
                             style={{ flex: 1 }}
                         />
                         {loading && (
