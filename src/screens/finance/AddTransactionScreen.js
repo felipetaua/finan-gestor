@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { 
     View, 
     Text, 
@@ -9,14 +9,16 @@ import {
     Switch, 
     Alert, 
     ActivityIndicator,
-    Platform 
+    Platform,
+    Modal
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Calendar } from 'react-native-calendars';
 import { theme } from '../../theme/theme';
 import { db, auth } from '../../services/firebaseConfig';
-import { collection, addDoc, serverTimestamp, updateDoc, doc, increment } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, increment, query, where, onSnapshot } from 'firebase/firestore';
 import { useCurrency } from '../../hooks/useCurrency';
 
 const CATEGORIES = {
@@ -40,6 +42,9 @@ const CATEGORIES = {
     ]
 };
 
+const CATEGORY_ICONS = ['food', 'car', 'popcorn', 'heart-pulse', 'school', 'home', 'cart', 'gift', 'cash', 'store', 'laptop', 'airplane', 'dog', 'wrench', 'credit-card', 'bank', 'music', 'tshirt-crew'];
+const CATEGORY_COLORS = ['#FF9F43', '#54A0FF', '#5F27CD', '#EE5253', '#00D2D3', '#10AC84', '#01a3a4', '#8395a7', '#EC4899', '#EAB308'];
+
 const AddTransactionScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
@@ -55,6 +60,70 @@ const AddTransactionScreen = () => {
     const [paymentReminder, setPaymentReminder] = useState(false);
     const [details, setDetails] = useState('');
     const isSubmittingRef = useRef(false);
+
+    // Estados para Data Customizada
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [isCalendarVisible, setIsCalendarVisible] = useState(false);
+
+    // Estados para Novas Categorias Customizadas
+    const [customCategories, setCustomCategories] = useState([]);
+    const [isNewCategoryModalVisible, setIsNewCategoryModalVisible] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryIcon, setNewCategoryIcon] = useState('cash');
+    const [newCategoryColor, setNewCategoryColor] = useState('#FF9F43');
+    const [isSavingCategory, setIsSavingCategory] = useState(false);
+
+    // Buscar categorias customizadas do Firestore em tempo real
+    useEffect(() => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const q = query(
+            collection(db, "custom_categories"),
+            where("userId", "==", user.uid)
+        );
+
+        const unsub = onSnapshot(q, (snap) => {
+            const list = snap.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setCustomCategories(list);
+        });
+
+        return unsub;
+    }, []);
+
+    const handleCreateCategory = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        if (!newCategoryName.trim()) {
+            Alert.alert("Ops!", "Por favor, digite o nome da categoria.");
+            return;
+        }
+
+        setIsSavingCategory(true);
+        try {
+            await addDoc(collection(db, "custom_categories"), {
+                userId: user.uid,
+                type: type, // 'expense' ou 'income'
+                name: newCategoryName.trim(),
+                icon: newCategoryIcon,
+                color: newCategoryColor,
+                createdAt: serverTimestamp()
+            });
+
+            setIsNewCategoryModalVisible(false);
+            setNewCategoryName('');
+            // A categoria aparecerá automaticamente na lista pelo onSnapshot
+        } catch (error) {
+            console.error("Erro ao salvar categoria customizada:", error);
+            Alert.alert("Erro", "Não foi possível criar a categoria.");
+        } finally {
+            setIsSavingCategory(false);
+        }
+    };
 
     const handleSave = async () => {
         if (isSubmittingRef.current || loading) return;
@@ -84,7 +153,7 @@ const AddTransactionScreen = () => {
                 paymentPaid: type === 'expense' ? false : null,
                 details: details,
                 accountType: accountType,
-                date: serverTimestamp(),
+                date: selectedDate, // Salva a data selecionada em vez de serverTimestamp()
                 createdAt: serverTimestamp(),
             };
 
@@ -111,7 +180,9 @@ const AddTransactionScreen = () => {
         }
     };
 
-    const currentCategories = type === 'expense' ? CATEGORIES.expense : CATEGORIES.income;
+    const baseCategories = type === 'expense' ? CATEGORIES.expense : CATEGORIES.income;
+    const filteredCustom = customCategories.filter(c => c.type === type);
+    const currentCategories = [...baseCategories, ...filteredCustom];
     const themeColor = type === 'expense' ? theme.colors.error : theme.colors.success;
 
     return (
@@ -155,6 +226,63 @@ const AddTransactionScreen = () => {
                     />
                 </View>
 
+                {/* Date Selection */}
+                <View style={styles.inputSection}>
+                    <Text style={styles.label}>Data da Transação</Text>
+                    <View style={styles.dateSelectorRow}>
+                        <TouchableOpacity 
+                            style={[
+                                styles.dateOptionBtn, 
+                                selectedDate.toDateString() === new Date().toDateString() && styles.dateOptionBtnActive
+                            ]}
+                            onPress={() => setSelectedDate(new Date())}
+                        >
+                            <Text style={[
+                                styles.dateOptionText, 
+                                selectedDate.toDateString() === new Date().toDateString() && styles.dateOptionTextActive
+                            ]}>Hoje</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity 
+                            style={[
+                                styles.dateOptionBtn, 
+                                selectedDate.toDateString() === new Date(Date.now() - 86400000).toDateString() && styles.dateOptionBtnActive
+                            ]}
+                            onPress={() => setSelectedDate(new Date(Date.now() - 86400000))}
+                        >
+                            <Text style={[
+                                styles.dateOptionText, 
+                                selectedDate.toDateString() === new Date(Date.now() - 86400000).toDateString() && styles.dateOptionTextActive
+                            ]}>Ontem</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity 
+                            style={[
+                                styles.dateOptionBtn, 
+                                styles.dateOptionCustomBtn,
+                                selectedDate.toDateString() !== new Date().toDateString() && 
+                                selectedDate.toDateString() !== new Date(Date.now() - 86400000).toDateString() && styles.dateOptionBtnActive
+                            ]}
+                            onPress={() => setIsCalendarVisible(true)}
+                        >
+                            <Ionicons name="calendar-outline" size={16} color={
+                                selectedDate.toDateString() !== new Date().toDateString() && 
+                                selectedDate.toDateString() !== new Date(Date.now() - 86400000).toDateString() ? '#FFF' : themeColor
+                            } style={{ marginRight: 5 }} />
+                            <Text style={[
+                                styles.dateOptionText, 
+                                selectedDate.toDateString() !== new Date().toDateString() && 
+                                selectedDate.toDateString() !== new Date(Date.now() - 86400000).toDateString() && styles.dateOptionTextActive
+                            ]}>
+                                {selectedDate.toDateString() === new Date().toDateString() || 
+                                 selectedDate.toDateString() === new Date(Date.now() - 86400000).toDateString() 
+                                    ? 'Outra Data' 
+                                    : selectedDate.toLocaleDateString('pt-BR')}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
                 {/* Category Selection */}
                 <View style={styles.inputSection}>
                     <Text style={styles.label}>Categoria</Text>
@@ -174,6 +302,17 @@ const AddTransactionScreen = () => {
                                 <Text style={styles.categoryName}>{cat.name}</Text>
                             </TouchableOpacity>
                         ))}
+
+                        {/* Botão de Adicionar Nova Categoria */}
+                        <TouchableOpacity 
+                            style={[styles.categoryItem, styles.addCategoryItem]}
+                            onPress={() => setIsNewCategoryModalVisible(true)}
+                        >
+                            <View style={[styles.categoryIcon, { backgroundColor: '#F1F5F9' }]}>
+                                <Ionicons name="add" size={24} color="#64748B" />
+                            </View>
+                            <Text style={[styles.categoryName, { color: '#64748B' }]}>Nova Cat...</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -232,6 +371,134 @@ const AddTransactionScreen = () => {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* Modal de Calendário */}
+            <Modal
+                visible={isCalendarVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setIsCalendarVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity 
+                        style={styles.modalBackgroundDismiss} 
+                        activeOpacity={1} 
+                        onPress={() => setIsCalendarVisible(false)} 
+                    />
+                    <View style={styles.calendarModalContent}>
+                        <View style={styles.calendarHeader}>
+                            <Text style={styles.calendarTitle}>Escolher Data</Text>
+                            <TouchableOpacity onPress={() => setIsCalendarVisible(false)}>
+                                <Ionicons name="close" size={24} color="#64748B" />
+                            </TouchableOpacity>
+                        </View>
+                        <Calendar
+                            maxDate={new Date().toISOString().split('T')[0]} // Não permite selecionar data futura
+                            current={selectedDate.toISOString().split('T')[0]}
+                            markedDates={{
+                                [selectedDate.toISOString().split('T')[0]]: { selected: true, selectedColor: themeColor }
+                            }}
+                            onDayPress={(day) => {
+                                // O dia é retornado como { year, month, day, dateString, timestamp }
+                                const localDate = new Date(day.year, day.month - 1, day.day);
+                                setSelectedDate(localDate);
+                                setIsCalendarVisible(false);
+                            }}
+                            theme={{
+                                todayTextColor: themeColor,
+                                arrowColor: themeColor,
+                                selectedDayBackgroundColor: themeColor,
+                                selectedDayTextColor: '#FFFFFF',
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal de Nova Categoria */}
+            <Modal
+                visible={isNewCategoryModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setIsNewCategoryModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity 
+                        style={styles.modalBackgroundDismiss} 
+                        activeOpacity={1} 
+                        onPress={() => setIsNewCategoryModalVisible(false)} 
+                    />
+                    <View style={styles.categoryModalContent}>
+                        <View style={styles.modalHeaderRow}>
+                            <Text style={styles.modalHeaderTitle}>Nova Categoria</Text>
+                            <TouchableOpacity onPress={() => setIsNewCategoryModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#64748B" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {/* Nome */}
+                            <Text style={styles.modalLabel}>Nome da Categoria</Text>
+                            <TextInput
+                                style={styles.modalTextInput}
+                                placeholder="Ex: Investimentos, Pet, Jogos..."
+                                value={newCategoryName}
+                                onChangeText={setNewCategoryName}
+                            />
+
+                            {/* Ícone */}
+                            <Text style={styles.modalLabel}>Escolha um Ícone</Text>
+                            <View style={styles.iconsSelectorGrid}>
+                                {CATEGORY_ICONS.map((ico) => (
+                                    <TouchableOpacity
+                                        key={ico}
+                                        style={[
+                                            styles.iconOptionItem,
+                                            newCategoryIcon === ico && { backgroundColor: themeColor }
+                                        ]}
+                                        onPress={() => setNewCategoryIcon(ico)}
+                                    >
+                                        <MaterialCommunityIcons 
+                                            name={ico} 
+                                            size={20} 
+                                            color={newCategoryIcon === ico ? '#FFF' : '#64748B'} 
+                                        />
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Cor */}
+                            <Text style={styles.modalLabel}>Escolha uma Cor</Text>
+                            <View style={styles.colorsSelectorGrid}>
+                                {CATEGORY_COLORS.map((col) => (
+                                    <TouchableOpacity
+                                        key={col}
+                                        style={[
+                                            styles.colorOptionItem,
+                                            { backgroundColor: col },
+                                            newCategoryColor === col && styles.colorOptionItemSelected
+                                        ]}
+                                        onPress={() => setNewCategoryColor(col)}
+                                    />
+                                ))}
+                            </View>
+
+                            {/* Criar Categoria Button */}
+                            <TouchableOpacity 
+                                style={[styles.createCategoryBtn, { backgroundColor: themeColor }]}
+                                onPress={handleCreateCategory}
+                                disabled={isSavingCategory}
+                            >
+                                {isSavingCategory ? (
+                                    <ActivityIndicator color="#FFF" />
+                                ) : (
+                                    <Text style={styles.createCategoryBtnText}>Criar Categoria</Text>
+                                )}
+                            </TouchableOpacity>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -285,6 +552,7 @@ const styles = StyleSheet.create({
         fontSize: 48,
         fontWeight: 'bold',
         minWidth: 100,
+        textAlign: 'center'
     },
     inputSection: {
         marginBottom: 25,
@@ -370,6 +638,151 @@ const styles = StyleSheet.create({
     saveButtonText: {
         color: '#FFF',
         fontSize: 18,
+        fontWeight: 'bold',
+    },
+    // Estilos do Seletor de Data
+    dateSelectorRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 8,
+        marginTop: 5,
+    },
+    dateOptionBtn: {
+        flex: 1,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: '#F9FAFB',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'row',
+    },
+    dateOptionCustomBtn: {
+        flex: 1.2,
+    },
+    dateOptionText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#4B5563',
+    },
+    dateOptionTextActive: {
+        color: '#FFFFFF',
+    },
+    // Estilo da categoria "Adicionar"
+    addCategoryItem: {
+        borderStyle: 'dashed',
+        borderColor: '#94A3B8',
+        borderWidth: 2,
+    },
+    // Estilos dos Modais
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        justifyContent: 'flex-end',
+    },
+    modalBackgroundDismiss: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+    },
+    calendarModalContent: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 20,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 25,
+    },
+    calendarHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    calendarTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1E293B',
+    },
+    categoryModalContent: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 20,
+        maxHeight: '80%',
+        paddingBottom: Platform.OS === 'ios' ? 40 : 25,
+    },
+    modalHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    modalHeaderTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1E293B',
+    },
+    modalLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#64748B',
+        marginTop: 15,
+        marginBottom: 8,
+    },
+    modalTextInput: {
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        padding: 14,
+        fontSize: 16,
+        color: '#0F172A',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    iconsSelectorGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 5,
+    },
+    iconOptionItem: {
+        width: '14%',
+        aspectRatio: 1,
+        borderRadius: 10,
+        backgroundColor: '#F1F5F9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    colorsSelectorGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 5,
+    },
+    colorOptionItem: {
+        width: '14%',
+        aspectRatio: 1,
+        borderRadius: 10,
+        marginBottom: 4,
+    },
+    colorOptionItemSelected: {
+        borderWidth: 3,
+        borderColor: '#0F172A',
+    },
+    createCategoryBtn: {
+        height: 52,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 25,
+        marginBottom: 10,
+    },
+    createCategoryBtnText: {
+        color: '#FFF',
+        fontSize: 16,
         fontWeight: 'bold',
     },
 });
