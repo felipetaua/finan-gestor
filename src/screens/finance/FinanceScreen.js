@@ -24,7 +24,7 @@ import FloatingActionButton from '../../components/finance/FloatingActionButton'
 import { Ionicons, MaterialCommunityIcons, FontAwesome6 } from '@expo/vector-icons';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { auth, db } from '../../services/firebaseConfig';
-import { doc, getDoc, onSnapshot, collection, query, where, orderBy, limit, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, orderBy, limit, updateDoc, increment, writeBatch, getDocs } from 'firebase/firestore';
 import { useCurrency } from '../../hooks/useCurrency';
 
 const AnimatedSparklesButton = ({ onPress }) => {
@@ -91,16 +91,154 @@ const FinanceScreen = () => {
   
   const [allTransactions, setAllTransactions] = useState([]);
   const [allChallenges, setAllChallenges] = useState([]);
-  const [activeAccount, setActiveAccount] = useState('Pessoal'); // 'Pessoal' ou 'PJ'
+  const [activeAccount, setActiveAccount] = useState('Pessoal'); 
+  const [userAccounts, setUserAccounts] = useState(['Pessoal', 'PJ']);
   const [isAccountMenuVisible, setIsAccountMenuVisible] = useState(false);
+
+  // Estados para o prompt de Input Customizado (Cross-platform modal)
+  const [isPromptVisible, setIsPromptVisible] = useState(false);
+  const [promptTitle, setPromptTitle] = useState('');
+  const [promptValue, setPromptValue] = useState('');
+  const [promptCallback, setPromptCallback] = useState(null);
+
+  // Estados para confirmação de exclusão de carteira com checkbox
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState('');
+  const [deleteConfirmChecked, setDeleteConfirmChecked] = useState(false);
+
+  const showPrompt = (title, initialVal, callback) => {
+      setPromptTitle(title);
+      setPromptValue(initialVal);
+      setPromptCallback(() => callback);
+      setIsPromptVisible(true);
+  };
+
+  const handleRenameAccount = async (oldName, newName) => {
+      if (!newName || !newName.trim()) return;
+      const trimmedNew = newName.trim();
+      if (trimmedNew.toLowerCase() === oldName.toLowerCase()) return;
+      
+      const updatedAccounts = userAccounts.map(acc => acc === oldName ? trimmedNew : acc);
+      setUserAccounts(updatedAccounts);
+      
+      if (activeAccount === oldName) {
+          setActiveAccount(trimmedNew);
+      }
+      
+      try {
+          const userRef = doc(db, "users", user?.uid);
+          await updateDoc(userRef, {
+              accounts: updatedAccounts
+          });
+          
+          // Atualiza as transações vinculadas a essa conta em segundo plano
+          const updateTrans = async () => {
+              try {
+                  const q = query(
+                      collection(db, "transactions"),
+                      where("userId", "==", user.uid),
+                      where("accountType", "==", oldName.toLowerCase())
+                  );
+                  const snap = await getDocs(q);
+                  const batch = writeBatch(db);
+                  snap.docs.forEach(docSnap => {
+                      batch.update(docSnap.ref, { accountType: trimmedNew.toLowerCase() });
+                  });
+                  await batch.commit();
+              } catch (e) {
+                  console.error("Erro ao atualizar transações da conta renomeada:", e);
+              }
+          };
+          updateTrans();
+      } catch (error) {
+          console.error("Erro ao salvar conta renomeada:", error);
+      }
+  };
+
+  const triggerDeleteAccount = (accName) => {
+      if (userAccounts.length <= 1) {
+          Alert.alert("Ops!", "Você precisa manter pelo menos uma conta ativa.");
+          return;
+      }
+      setAccountToDelete(accName);
+      setDeleteConfirmChecked(false);
+      setIsDeleteModalVisible(true);
+  };
+
+  const executeDeleteAccount = async () => {
+      if (!deleteConfirmChecked || !accountToDelete) return;
+      
+      const accName = accountToDelete;
+      const updatedAccounts = userAccounts.filter(acc => acc !== accName);
+      setUserAccounts(updatedAccounts);
+      
+      if (activeAccount === accName) {
+          setActiveAccount(updatedAccounts[0]);
+      }
+      
+      setIsDeleteModalVisible(false);
+      
+      try {
+          const userRef = doc(db, "users", user.uid);
+          await updateDoc(userRef, {
+              accounts: updatedAccounts
+          });
+          
+          // Excluir todas as transações associadas a esta carteira
+          const deleteAssociatedTransactions = async () => {
+              try {
+                  const q = query(
+                      collection(db, "transactions"),
+                      where("userId", "==", user.uid),
+                      where("accountType", "==", accName.toLowerCase())
+                  );
+                  const snap = await getDocs(q);
+                  const batch = writeBatch(db);
+                  snap.docs.forEach(docSnap => {
+                      batch.delete(docSnap.ref);
+                  });
+                  await batch.commit();
+                  console.log(`Excluídas ${snap.docs.length} transações associadas à conta ${accName}`);
+              } catch (e) {
+                  console.error("Erro ao excluir transações da carteira:", e);
+              }
+          };
+          deleteAssociatedTransactions();
+          
+      } catch (error) {
+          console.error("Erro ao excluir carteira:", error);
+      }
+  };
+
+  const handleAddAccount = async (name) => {
+      if (!name || !name.trim()) return;
+      const trimmedName = name.trim();
+      
+      if (userAccounts.some(acc => acc.toLowerCase() === trimmedName.toLowerCase())) {
+          Alert.alert("Ops!", "Já existe uma carteira com este nome.");
+          return;
+      }
+      
+      const updatedAccounts = [...userAccounts, trimmedName];
+      setUserAccounts(updatedAccounts);
+      
+      try {
+          const userRef = doc(db, "users", user.uid);
+          await updateDoc(userRef, {
+              accounts: updatedAccounts
+          });
+      } catch (error) {
+          console.error("Erro ao adicionar nova conta:", error);
+      }
+  };
 
   // Efeito de filtragem de transações com base na conta ativa
   useEffect(() => {
-    const filtered = allTransactions.filter(t => 
-      activeAccount === 'PJ' 
-        ? t.accountType === 'pj' 
-        : (t.accountType !== 'pj')
-    );
+    const filtered = allTransactions.filter(t => {
+      const tAcc = (t.accountType || 'Pessoal').toLowerCase();
+      const activeAcc = (activeAccount || 'Pessoal').toLowerCase();
+      return tAcc === activeAcc;
+    });
 
     setTransactions(filtered.slice(0, 10));
 
@@ -115,11 +253,11 @@ const FinanceScreen = () => {
 
   // Efeito de filtragem de desafios com base na conta ativa
   useEffect(() => {
-    const filtered = allChallenges.filter(c => 
-      activeAccount === 'PJ' 
-        ? c.accountType === 'pj' 
-        : (c.accountType !== 'pj')
-    );
+    const filtered = allChallenges.filter(c => {
+      const cAcc = (c.accountType || 'Pessoal').toLowerCase();
+      const activeAcc = (activeAccount || 'Pessoal').toLowerCase();
+      return cAcc === activeAcc;
+    });
     setUserChallenges(filtered);
   }, [allChallenges, activeAccount]);
 
@@ -191,6 +329,11 @@ const FinanceScreen = () => {
         if (data.plan) setUserPlan(data.plan);
         if (data.xp !== undefined) setUserXP(data.xp);
         if (data.level !== undefined) setUserLevel(data.level);
+        if (data.accounts && Array.isArray(data.accounts)) {
+          setUserAccounts(data.accounts);
+        } else {
+          setUserAccounts(['Pessoal', 'PJ']);
+        }
       }
     });
 
@@ -291,9 +434,9 @@ const FinanceScreen = () => {
                 activeOpacity={0.7}
               >
                 <Text style={styles.accountText}>
-                  Conta <Text style={styles.accountHighlight}>{activeAccount}</Text>
+                  Conta <Text style={[styles.accountHighlight, { color: userPlan === 'Premium' ? '#3b82f6' : '#64748B' }]}>{activeAccount}</Text>
                 </Text>
-                <Ionicons name="chevron-down" size={14} color="#94A3B8" style={{ marginLeft: 2 }} />
+                <Ionicons name="chevron-down" size={14} color={userPlan === 'Premium' ? '#3b82f6' : '#94A3B8'} style={{ marginLeft: 2 }} />
               </TouchableOpacity>
               <View style={styles.xpDivider} />
               <View style={styles.xpContainer}>
@@ -719,51 +862,70 @@ const FinanceScreen = () => {
           <View style={styles.accountMenuContent}>
             <Text style={styles.accountMenuTitle}>Selecionar Conta</Text>
             
-            <TouchableOpacity 
-              style={[
-                styles.accountMenuItem, 
-                activeAccount === 'Pessoal' && styles.accountMenuItemActive
-              ]} 
-              onPress={() => {
-                setActiveAccount('Pessoal');
-                setIsAccountMenuVisible(false);
-              }}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.accountMenuIconCircle, { backgroundColor: activeAccount === 'Pessoal' ? '#3b82f615' : '#F1F5F9' }]}>
-                <Ionicons name="person" size={20} color={activeAccount === 'Pessoal' ? '#3b82f6' : '#64748B'} />
-              </View>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={[styles.accountMenuName, activeAccount === 'Pessoal' && styles.accountMenuNameActive]}>Conta Pessoal</Text>
-                <Text style={styles.accountMenuDesc}>Gastos e receitas pessoais do dia a dia</Text>
-              </View>
-              {activeAccount === 'Pessoal' && (
-                <Ionicons name="checkmark-circle" size={24} color="#3b82f6" />
-              )}
-            </TouchableOpacity>
+            <ScrollView style={{ width: '100%', maxHeight: 260 }} showsVerticalScrollIndicator={false}>
+              {userAccounts.map((accName) => {
+                const isActive = activeAccount === accName;
+                const iconName = accName === 'PJ' ? 'briefcase' : 'wallet';
+                
+                return (
+                  <View key={accName} style={[styles.accountMenuItem, isActive && styles.accountMenuItemActive]}>
+                    <TouchableOpacity 
+                      style={styles.accountMenuItemMainClickable}
+                      onPress={() => {
+                        setActiveAccount(accName);
+                        setIsAccountMenuVisible(false);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.accountMenuIconCircle, { backgroundColor: isActive ? '#3b82f615' : '#F1F5F9' }]}>
+                        <Ionicons name={iconName} size={18} color={isActive ? '#3b82f6' : '#64748B'} />
+                      </View>
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text style={[styles.accountMenuName, isActive && styles.accountMenuNameActive]} numberOfLines={1}>{accName}</Text>
+                        <Text style={styles.accountMenuDesc} numberOfLines={1}>Visualizar saldo e transações</Text>
+                      </View>
+                    </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[
-                styles.accountMenuItem, 
-                activeAccount === 'PJ' && styles.accountMenuItemActive
-              ]} 
-              onPress={() => {
-                setActiveAccount('PJ');
-                setIsAccountMenuVisible(false);
-              }}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.accountMenuIconCircle, { backgroundColor: activeAccount === 'PJ' ? '#3b82f615' : '#F1F5F9' }]}>
-                <Ionicons name="briefcase" size={20} color={activeAccount === 'PJ' ? '#3b82f6' : '#64748B'} />
-              </View>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={[styles.accountMenuName, activeAccount === 'PJ' && styles.accountMenuNameActive]}>Conta PJ</Text>
-                <Text style={styles.accountMenuDesc}>Finanças da sua empresa ou trabalho freelance</Text>
-              </View>
-              {activeAccount === 'PJ' && (
-                <Ionicons name="checkmark-circle" size={24} color="#3b82f6" />
-              )}
-            </TouchableOpacity>
+                    <View style={styles.accountMenuItemActions}>
+                      <TouchableOpacity 
+                        style={styles.accountActionIntegratedBtn}
+                        onPress={() => {
+                          showPrompt("Renomear Carteira", accName, (newName) => {
+                            handleRenameAccount(accName, newName);
+                          });
+                        }}
+                      >
+                        <Ionicons name="pencil-outline" size={14} color="#64748B" />
+                      </TouchableOpacity>
+                      
+                      {userAccounts.length > 1 && (
+                        <TouchableOpacity 
+                          style={styles.accountActionIntegratedBtn}
+                          onPress={() => triggerDeleteAccount(accName)}
+                        >
+                          <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            {userPlan === 'Premium' && (
+              <TouchableOpacity 
+                style={styles.addAccountBtn}
+                onPress={() => {
+                  showPrompt("Nova Carteira", "", (newName) => {
+                    handleAddAccount(newName);
+                  });
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle-outline" size={18} color="#3b82f6" style={{ marginRight: 6 }} />
+                <Text style={styles.addAccountBtnText}>Adicionar Nova Carteira</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity 
               style={styles.openFinanceBtn}
@@ -796,7 +958,106 @@ const FinanceScreen = () => {
         </View>
       </Modal>
 
-      <FloatingActionButton activeAccount={activeAccount} />
+      {/* Modal de Input Prompt Customizado (Cross-platform) */}
+      <Modal
+        visible={isPromptVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsPromptVisible(false)}
+      >
+        <View style={styles.promptOverlay}>
+          <View style={styles.promptContent}>
+            <Text style={styles.promptTitle}>{promptTitle}</Text>
+            <TextInput
+              style={styles.promptInput}
+              value={promptValue}
+              onChangeText={setPromptValue}
+              autoFocus
+              placeholder="Digite o nome..."
+              placeholderTextColor="#94A3B8"
+            />
+            <View style={styles.promptButtonsRow}>
+              <TouchableOpacity 
+                style={[styles.promptBtn, styles.promptCancelBtn]} 
+                onPress={() => setIsPromptVisible(false)}
+              >
+                <Text style={styles.promptCancelBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.promptBtn, styles.promptSaveBtn]} 
+                onPress={() => {
+                  if (promptCallback) promptCallback(promptValue);
+                  setIsPromptVisible(false);
+                }}
+              >
+                <Text style={styles.promptSaveBtnText}>Salvar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Customizado de Confirmação de Exclusão */}
+      <Modal
+        visible={isDeleteModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsDeleteModalVisible(false)}
+      >
+        <View style={styles.promptOverlay}>
+          <View style={styles.promptContent}>
+            <View style={styles.deleteHeaderRow}>
+              <Ionicons name="warning" size={22} color="#EF4444" style={{ marginRight: 8 }} />
+              <Text style={styles.deleteModalTitle}>Excluir Carteira</Text>
+            </View>
+            
+            <Text style={styles.deleteModalWarning}>
+              Você tem certeza de que deseja excluir permanentemente a carteira <Text style={{ fontWeight: 'bold' }}>"{accountToDelete}"</Text>? Esta ação é irreversível.
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.checkboxContainer}
+              onPress={() => setDeleteConfirmChecked(!deleteConfirmChecked)}
+              activeOpacity={0.8}
+            >
+              <Ionicons 
+                name={deleteConfirmChecked ? "checkbox" : "square-outline"} 
+                size={20} 
+                color={deleteConfirmChecked ? "#EF4444" : "#64748B"} 
+                style={{ marginRight: 10, marginTop: 2 }}
+              />
+              <Text style={styles.checkboxLabel}>
+                Confirmo que desejo excluir permanentemente todas as transações vinculadas a esta carteira.
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.promptButtonsRow}>
+              <TouchableOpacity 
+                style={[styles.promptBtn, styles.promptCancelBtn]} 
+                onPress={() => setIsDeleteModalVisible(false)}
+              >
+                <Text style={styles.promptCancelBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[
+                  styles.promptBtn, 
+                  styles.promptSaveBtn, 
+                  { backgroundColor: deleteConfirmChecked ? '#EF4444' : '#E2E8F0' }
+                ]} 
+                onPress={executeDeleteAccount}
+                disabled={!deleteConfirmChecked}
+              >
+                <Text style={[
+                  styles.promptSaveBtnText, 
+                  { color: deleteConfirmChecked ? '#FFF' : '#94A3B8' }
+                ]}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <FloatingActionButton activeAccount={activeAccount} isPremium={userPlan === 'Premium'} />
     </View>
   );
 };
@@ -1447,12 +1708,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    padding: 16,
     borderRadius: 18,
     marginBottom: 12,
     borderWidth: 1.5,
     borderColor: '#F1F5F9',
     backgroundColor: '#FFF',
+    overflow: 'hidden',
   },
   accountMenuItemActive: {
     borderColor: '#3b82f6',
@@ -1521,6 +1782,148 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748B',
     marginTop: 2,
+  },
+  accountMenuItemMainClickable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  accountMenuItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 16,
+    paddingLeft: 8,
+    gap: 6,
+  },
+  accountActionIntegratedBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  addAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#3b82f660',
+    backgroundColor: '#FFF',
+    marginBottom: 12,
+  },
+  addAccountBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3b82f6',
+  },
+  promptOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  promptContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 24,
+    width: '85%',
+    maxWidth: 320,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  promptTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    marginBottom: 16,
+  },
+  promptInput: {
+    width: '100%',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    color: '#1E293B',
+    fontSize: 15,
+    marginBottom: 20,
+  },
+  promptButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  promptBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  promptCancelBtn: {
+    backgroundColor: '#F1F5F9',
+  },
+  promptSaveBtn: {
+    backgroundColor: '#3b82f6',
+  },
+  promptCancelBtnText: {
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  promptSaveBtnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  deleteHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  deleteModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#EF4444',
+  },
+  deleteModalWarning: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#991B1B',
+    lineHeight: 18,
   },
 });
 

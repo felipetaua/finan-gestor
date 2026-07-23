@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../theme/theme';
 
-const FloatingActionButton = ({ activeAccount = 'Pessoal' }) => {
+const FloatingActionButton = ({ activeAccount = 'Pessoal', isPremium = false }) => {
     const navigation = useNavigation();
     const [isOpen, setIsOpen] = useState(false);
     const [animation] = useState(new Animated.Value(0));
@@ -67,18 +67,20 @@ const FloatingActionButton = ({ activeAccount = 'Pessoal' }) => {
 
     return (
         <View style={styles.container}>
-            <Animated.View style={[styles.item, aiStyle]}>
-                <TouchableOpacity 
-                    style={[styles.subButton, { backgroundColor: '#8B5CF6' }]}
-                    onPress={() => {
-                        toggleMenu();
-                        navigation.navigate('AiAddTransaction', { accountType: activeAccount.toLowerCase() });
-                    }}
-                >
-                    <MaterialCommunityIcons name="robot-outline" size={24} color="white" />
-                </TouchableOpacity>
-                <Text style={styles.label}>IA</Text>
-            </Animated.View>
+            {isPremium && (
+                <Animated.View style={[styles.item, aiStyle]}>
+                    <TouchableOpacity 
+                        style={[styles.subButton, { backgroundColor: '#8B5CF6' }]}
+                        onPress={() => {
+                            toggleMenu();
+                            navigation.navigate('AiAddTransaction', { accountType: activeAccount.toLowerCase() });
+                        }}
+                    >
+                        <MaterialCommunityIcons name="robot-outline" size={24} color="white" />
+                    </TouchableOpacity>
+                    <Text style={styles.label}>IA</Text>
+                </Animated.View>
+            )}
 
             <Animated.View style={[styles.item, incomeStyle]}>
                 <TouchableOpacity 
