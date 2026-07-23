@@ -355,14 +355,6 @@ const FinanceScreen = () => {
               <Text style={styles.actionButtonLabel}>Análises</Text>
             </TouchableOpacity>
 
-            {userPlan === 'Premium' && (
-              <TouchableOpacity style={styles.actionButtonItem} onPress={() => setIsBankingModalVisible(true)}>
-                <View style={[styles.actionIconContainer, { backgroundColor: '#F0FDF4' }]}>
-                  <MaterialCommunityIcons name="bank-plus" size={22} color="#22c55e" />
-                </View>
-                <Text style={styles.actionButtonLabel}>Open Banking</Text>
-              </TouchableOpacity>
-            )}
 
             <TouchableOpacity style={styles.actionButtonItem} onPress={() => navigation.navigate('Payments')}>
               <View style={[styles.actionIconContainer, { backgroundColor: '#FFF1F2' }]}>
@@ -783,8 +775,14 @@ const FinanceScreen = () => {
               }}
               activeOpacity={0.8}
             >
-              <Ionicons name="bank-outline" size={18} color="#3b82f6" style={{ marginRight: 8 }} />
-              <Text style={styles.openFinanceBtnText}>Conectar via Open Finance</Text>
+              <View style={styles.openFinanceIconCircle}>
+                <Ionicons name="swap-horizontal" size={20} color="#FFF" />
+              </View>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.openFinanceBtnText}>Sincronizar Open Finance</Text>
+                <Text style={styles.openFinanceDesc}>Conecte suas contas bancárias automaticamente</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#3b82f6" />
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -1497,21 +1495,32 @@ const styles = StyleSheet.create({
   openFinanceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     width: '100%',
-    paddingVertical: 14,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: '#3b82f6',
-    borderStyle: 'dashed',
+    borderColor: '#3b82f630',
     backgroundColor: '#3b82f608',
-    marginBottom: 16,
-    marginTop: 4,
+  },
+  openFinanceIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
   },
   openFinanceBtnText: {
-    color: '#3b82f6',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
+    color: '#3b82f6',
+  },
+  openFinanceDesc: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
   },
 });
 
