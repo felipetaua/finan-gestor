@@ -120,25 +120,28 @@ export default function LoginScreen({ route, navigation }) {
         try {
             const userInfo = await fetchGoogleUserInfo(token);
             console.log("Informações do usuário obtidas com sucesso do Google!");
-            await handleFirebaseSocialLogin('google', userInfo);
+            await handleFirebaseSocialLogin('google', userInfo, token);
         } catch (error) {
             console.error("Erro ao obter dados do usuário do Google:", error);
             Alert.alert("Erro", "Não foi possível obter os dados do seu perfil do Google.");
         }
     };
 
-    const handleFirebaseSocialLogin = async (type, userInfo) => {
+    const handleFirebaseSocialLogin = async (type, userInfo, token) => {
         try {
             const email = userInfo.email;
             const name = userInfo.name;
             const photoUrl = userInfo.picture;
             const providerId = userInfo.id;
 
-            // Criar credencial de autenticação
-            const credential = GoogleAuthProvider.credential(null, userInfo.idToken);
+            // Criar credencial de autenticação do Firebase
+            // Usamos o idToken (do prompt nativo) ou o accessToken (do fluxo manual do Expo Go)
+            const firebaseToken = response?.authentication?.idToken || token;
+            if (!firebaseToken) {
+                throw new Error("Nenhum token válido do Google foi fornecido.");
+            }
             
-            // Tentar login com o Firebase usando o token de acesso obtido
-            const credentialGoogle = GoogleAuthProvider.credential(null, tokenGoogleFix(userInfo, response));
+            const credentialGoogle = GoogleAuthProvider.credential(null, firebaseToken);
             const userCredential = await signInWithCredential(auth, credentialGoogle);
             const user = userCredential.user;
 
