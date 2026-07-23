@@ -348,7 +348,7 @@ const FinanceScreen = () => {
           </View>
           
           <View style={styles.balanceActions}>
-            <TouchableOpacity style={styles.actionButtonItem} onPress={() => navigation.navigate('AnalyticsScreen')}>
+            <TouchableOpacity style={styles.actionButtonItem} onPress={() => navigation.navigate('AnalyticsScreen', { activeAccount })}>
               <View style={[styles.actionIconContainer, { backgroundColor: '#E0F2FE' }]}>
                 <Ionicons name="pie-chart" size={22} color="#0ea5e9" />
               </View>
