@@ -373,12 +373,7 @@ const AddTransactionScreen = () => {
             </ScrollView>
 
             {/* Modal de Calendário */}
-            <Modal
-                visible={isCalendarVisible}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setIsCalendarVisible(false)}
-            >
+            {isCalendarVisible && (
                 <View style={styles.modalOverlay}>
                     <TouchableOpacity 
                         style={styles.modalBackgroundDismiss} 
@@ -413,15 +408,10 @@ const AddTransactionScreen = () => {
                         />
                     </View>
                 </View>
-            </Modal>
+            )}
 
             {/* Modal de Nova Categoria */}
-            <Modal
-                visible={isNewCategoryModalVisible}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setIsNewCategoryModalVisible(false)}
-            >
+            {isNewCategoryModalVisible && (
                 <View style={styles.modalOverlay}>
                     <TouchableOpacity 
                         style={styles.modalBackgroundDismiss} 
@@ -498,7 +488,7 @@ const AddTransactionScreen = () => {
                         </ScrollView>
                     </View>
                 </View>
-            </Modal>
+            )}
         </View>
     );
 };
@@ -677,9 +667,14 @@ const styles = StyleSheet.create({
     },
     // Estilos dos Modais
     modalOverlay: {
-        flex: 1,
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
         justifyContent: 'flex-end',
+        zIndex: 9999,
     },
     modalBackgroundDismiss: {
         position: 'absolute',
@@ -694,6 +689,9 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 24,
         padding: 20,
         paddingBottom: Platform.OS === 'ios' ? 40 : 25,
+        width: '100%',
+        maxWidth: 500,
+        alignSelf: 'center',
     },
     calendarHeader: {
         flexDirection: 'row',
@@ -713,6 +711,9 @@ const styles = StyleSheet.create({
         padding: 20,
         maxHeight: '80%',
         paddingBottom: Platform.OS === 'ios' ? 40 : 25,
+        width: '100%',
+        maxWidth: 500,
+        alignSelf: 'center',
     },
     modalHeaderRow: {
         flexDirection: 'row',
