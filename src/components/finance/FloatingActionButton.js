@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../theme/theme';
 
-const FloatingActionButton = () => {
+const FloatingActionButton = ({ activeAccount = 'Pessoal' }) => {
     const navigation = useNavigation();
     const [isOpen, setIsOpen] = useState(false);
     const [animation] = useState(new Animated.Value(0));
@@ -21,7 +21,7 @@ const FloatingActionButton = () => {
 
     const handleNavigate = (type) => {
         toggleMenu();
-        navigation.navigate('AddTransaction', { type });
+        navigation.navigate('AddTransaction', { type, accountType: activeAccount.toLowerCase() });
     };
 
     const expenseStyle = {
@@ -72,7 +72,7 @@ const FloatingActionButton = () => {
                     style={[styles.subButton, { backgroundColor: '#8B5CF6' }]}
                     onPress={() => {
                         toggleMenu();
-                        navigation.navigate('AiAddTransaction');
+                        navigation.navigate('AiAddTransaction', { accountType: activeAccount.toLowerCase() });
                     }}
                 >
                     <MaterialCommunityIcons name="robot-outline" size={24} color="white" />

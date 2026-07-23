@@ -88,6 +88,41 @@ const FinanceScreen = () => {
   const [transactions, setTransactions] = useState([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [userChallenges, setUserChallenges] = useState([]);
+  
+  const [allTransactions, setAllTransactions] = useState([]);
+  const [allChallenges, setAllChallenges] = useState([]);
+  const [activeAccount, setActiveAccount] = useState('Pessoal'); // 'Pessoal' ou 'PJ'
+  const [isAccountMenuVisible, setIsAccountMenuVisible] = useState(false);
+
+  // Efeito de filtragem de transações com base na conta ativa
+  useEffect(() => {
+    const filtered = allTransactions.filter(t => 
+      activeAccount === 'PJ' 
+        ? t.accountType === 'pj' 
+        : (t.accountType !== 'pj')
+    );
+
+    setTransactions(filtered.slice(0, 10));
+
+    // Cálculo do saldo com base nas transações filtradas da conta ativa
+    let total = 0;
+    filtered.forEach(t => {
+      if (t.type === 'income') total += t.amount;
+      else total -= t.amount;
+    });
+    setTotalBalance(total);
+  }, [allTransactions, activeAccount]);
+
+  // Efeito de filtragem de desafios com base na conta ativa
+  useEffect(() => {
+    const filtered = allChallenges.filter(c => 
+      activeAccount === 'PJ' 
+        ? c.accountType === 'pj' 
+        : (c.accountType !== 'pj')
+    );
+    setUserChallenges(filtered);
+  }, [allChallenges, activeAccount]);
+
   const [loadingChallenges, setLoadingChallenges] = useState(true);
   const [collapsedChallenges, setCollapsedChallenges] = useState({});
   const [isAllCollapsed, setIsAllCollapsed] = useState(false);
@@ -178,15 +213,7 @@ const FinanceScreen = () => {
         return dateB - dateA;
       });
 
-      setTransactions(transList.slice(0, 10));
-
-      // Cálculo simplificado do saldo
-      let total = 0;
-      transList.forEach(t => {
-        if (t.type === 'income') total += t.amount;
-        else total -= t.amount;
-      });
-      setTotalBalance(total);
+      setAllTransactions(transList);
     }, (error) => {
       console.error("Erro nas transações:", error);
     });
@@ -203,7 +230,7 @@ const FinanceScreen = () => {
         id: doc.id,
         ...doc.data()
       }));
-      setUserChallenges(challengeList);
+      setAllChallenges(challengeList);
       setLoadingChallenges(false);
     }, (error) => {
       console.error("Erro nos desafios:", error);
@@ -258,12 +285,16 @@ const FinanceScreen = () => {
               </Text>
             </View>
             <View style={styles.planAndXP}>
-              <View style={styles.planContainer}>
-                <Text style={styles.planLabel}>Plano </Text>
-                <Text style={[styles.planType, { color: userPlan === 'Premium' ? '#0ea5e9' : '#777' }]}>
-                  {userPlan}
+              <TouchableOpacity 
+                style={styles.accountSwitcher}
+                onPress={() => setIsAccountMenuVisible(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.accountText}>
+                  Conta <Text style={styles.accountHighlight}>{activeAccount}</Text>
                 </Text>
-              </View>
+                <Ionicons name="chevron-down" size={14} color="#94A3B8" style={{ marginLeft: 2 }} />
+              </TouchableOpacity>
               <View style={styles.xpDivider} />
               <View style={styles.xpContainer}>
                 <Text style={styles.xpText}>Lvl {userLevel} • {userXP} XP</Text>
@@ -680,7 +711,80 @@ const FinanceScreen = () => {
         </View>
       </Modal>
 
-      <FloatingActionButton />
+      {/* Modal de Seleção de Conta */}
+      <Modal
+        visible={isAccountMenuVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsAccountMenuVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackgroundDismiss} 
+            activeOpacity={1} 
+            onPress={() => setIsAccountMenuVisible(false)} 
+          />
+          <View style={styles.accountMenuContent}>
+            <Text style={styles.accountMenuTitle}>Selecionar Conta</Text>
+            
+            <TouchableOpacity 
+              style={[
+                styles.accountMenuItem, 
+                activeAccount === 'Pessoal' && styles.accountMenuItemActive
+              ]} 
+              onPress={() => {
+                setActiveAccount('Pessoal');
+                setIsAccountMenuVisible(false);
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.accountMenuIconCircle, { backgroundColor: activeAccount === 'Pessoal' ? '#3b82f615' : '#F1F5F9' }]}>
+                <Ionicons name="person" size={20} color={activeAccount === 'Pessoal' ? '#3b82f6' : '#64748B'} />
+              </View>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={[styles.accountMenuName, activeAccount === 'Pessoal' && styles.accountMenuNameActive]}>Conta Pessoal</Text>
+                <Text style={styles.accountMenuDesc}>Gastos e receitas pessoais do dia a dia</Text>
+              </View>
+              {activeAccount === 'Pessoal' && (
+                <Ionicons name="checkmark-circle" size={24} color="#3b82f6" />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[
+                styles.accountMenuItem, 
+                activeAccount === 'PJ' && styles.accountMenuItemActive
+              ]} 
+              onPress={() => {
+                setActiveAccount('PJ');
+                setIsAccountMenuVisible(false);
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.accountMenuIconCircle, { backgroundColor: activeAccount === 'PJ' ? '#3b82f615' : '#F1F5F9' }]}>
+                <Ionicons name="briefcase" size={20} color={activeAccount === 'PJ' ? '#3b82f6' : '#64748B'} />
+              </View>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={[styles.accountMenuName, activeAccount === 'PJ' && styles.accountMenuNameActive]}>Conta PJ</Text>
+                <Text style={styles.accountMenuDesc}>Finanças da sua empresa ou trabalho freelance</Text>
+              </View>
+              {activeAccount === 'PJ' && (
+                <Ionicons name="checkmark-circle" size={24} color="#3b82f6" />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.accountMenuCloseBtn}
+              onPress={() => setIsAccountMenuVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.accountMenuCloseBtnText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <FloatingActionButton activeAccount={activeAccount} />
     </View>
   );
 };
@@ -1286,6 +1390,95 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  accountSwitcher: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  accountText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  accountHighlight: {
+    color: '#3b82f6',
+    fontWeight: '700',
+  },
+  accountMenuContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 28,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
+  },
+  accountMenuTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  accountMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#FFF',
+  },
+  accountMenuItemActive: {
+    borderColor: '#3b82f6',
+    backgroundColor: '#F8FAFC',
+  },
+  accountMenuIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  accountMenuName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  accountMenuNameActive: {
+    color: '#3b82f6',
+  },
+  accountMenuDesc: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  accountMenuCloseBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 10,
+    backgroundColor: '#F1F5F9',
+  },
+  accountMenuCloseBtnText: {
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

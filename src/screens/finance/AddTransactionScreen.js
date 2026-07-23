@@ -44,7 +44,7 @@ const AddTransactionScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const route = useRoute();
-    const { type = 'expense' } = route.params || {};
+    const { type = 'expense', accountType = 'pessoal' } = route.params || {};
     const { currencySymbol, currencyCode } = useCurrency();
 
     const [loading, setLoading] = useState(false);
@@ -83,6 +83,7 @@ const AddTransactionScreen = () => {
                 paymentReminder: type === 'expense' ? paymentReminder : false,
                 paymentPaid: type === 'expense' ? false : null,
                 details: details,
+                accountType: accountType,
                 date: serverTimestamp(),
                 createdAt: serverTimestamp(),
             };
