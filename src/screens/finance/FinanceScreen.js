@@ -774,6 +774,20 @@ const FinanceScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity 
+              style={styles.openFinanceBtn}
+              onPress={() => {
+                setIsAccountMenuVisible(false);
+                setTimeout(() => {
+                  setIsBankingModalVisible(true);
+                }, 300);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="bank-outline" size={18} color="#3b82f6" style={{ marginRight: 8 }} />
+              <Text style={styles.openFinanceBtnText}>Conectar via Open Finance</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
               style={styles.accountMenuCloseBtn}
               onPress={() => setIsAccountMenuVisible(false)}
               activeOpacity={0.7}
@@ -1479,6 +1493,25 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontSize: 14,
     fontWeight: '600',
+  },
+  openFinanceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#3b82f6',
+    borderStyle: 'dashed',
+    backgroundColor: '#3b82f608',
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  openFinanceBtnText: {
+    color: '#3b82f6',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 
