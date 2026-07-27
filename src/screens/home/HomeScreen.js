@@ -17,12 +17,20 @@ const HomeScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const animation = React.useRef(null);
+    const scrollViewRef = React.useRef(null);
     const [streak, setStreak] = useState(0);
     const [coins, setCoins] = useState(0);
     const [hearts, setHearts] = useState(6);
     const [isPremium, setIsPremium] = useState(false);
     const [nextEnergyTimeStr, setNextEnergyTimeStr] = useState("30:00");
     const [completedUnitIds, setCompletedUnitIds] = useState([]);
+
+    // Rola para o final da lista (onde a trilha começa) ao montar a tela
+    useEffect(() => {
+        setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: false });
+        }, 400);
+    }, []);
 
     const sectionsData = useMemo(() => {
         const completedSet = new Set(completedUnitIds);
@@ -206,14 +214,19 @@ const HomeScreen = () => {
             nextEnergyTime={nextEnergyTimeStr} 
         />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {sectionsData.map((section, index) => {
-                const isFirstGroup = index === 0;
+        <ScrollView 
+            ref={scrollViewRef}
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.scrollContent}
+        >
+            {[...sectionsData].reverse().map((section) => {
+                const originalSectionIndex = sectionsData.findIndex(s => s.id === section.id);
+                const isFirstSection = originalSectionIndex === 0;
 
                 return (
                     <View key={`section-${section.id}`}>
                         <SectionBanner
-                            section={index + 1}
+                            section={originalSectionIndex + 1}
                             unit={section.unidades.length}
                             description={section.titulo}
                             onPress={() => {
@@ -222,15 +235,15 @@ const HomeScreen = () => {
                                     : section.titulo;
                                 const sectionBanner = {
                                     id: `section-${section.id}`,
-                                    title: `Seção ${index + 1}: ${cleanTitle}`,
+                                    title: `Seção ${originalSectionIndex + 1}: ${cleanTitle}`,
                                     subtitle: `${section.unidades.length} Unidades de aprendizado`,
-                                    color: index % 3 === 0 ? '#1CB0F6' : (index % 3 === 1 ? '#22C55E' : '#FF9600'),
+                                    color: originalSectionIndex % 3 === 0 ? '#1CB0F6' : (originalSectionIndex % 3 === 1 ? '#22C55E' : '#FF9600'),
                                     detail: {
                                         heading: section.titulo,
                                         body: [
                                             {
                                                 type: 'paragraph',
-                                                text: `Bem-vindo à Seção ${index + 1} da sua trilha de aprendizado financeiro. Esta seção aborda conceitos fundamentais sobre planejamento, economia, e atitudes práticas para alavancar suas conquistas financeiras.`
+                                                text: `Bem-vindo à Seção ${originalSectionIndex + 1} da sua trilha de aprendizado financeiro. Esta seção aborda conceitos fundamentais sobre planejamento, economia, e atitudes práticas para alavancar suas conquistas financeiras.`
                                             },
                                             ...section.unidades.map((u, ui) => ({
                                                 type: 'section',
@@ -249,21 +262,21 @@ const HomeScreen = () => {
                             }}
                         />
                         <View style={styles.trailContainer}>
-                            {isFirstGroup && (
-                                <LottieView
-                                    autoPlay
-                                    loop={true}
-                                    style={{ width: 150, height: 150 }}
-                                    source={require('../../assets/lottie/loading-coin.json')}
-                                />
-                            )}
-                            {section.unidades.map(node => (
+                            {[...section.unidades].reverse().map(node => (
                                 <TrailNode 
                                     key={node.id} 
                                     node={node} 
                                     onPress={handleNodePress}
                                 />
                             ))}
+                            {isFirstSection && (
+                                <LottieView
+                                    autoPlay
+                                    loop={true}
+                                    style={{ width: 150, height: 150, marginTop: 10 }}
+                                    source={require('../../assets/lottie/loading-coin.json')}
+                                />
+                            )}
                         </View>
                     </View>
                 );
