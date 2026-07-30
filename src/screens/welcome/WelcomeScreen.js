@@ -6,8 +6,9 @@ import Button from '../../components/common/Button';
 export default function WelcomeScreen({ navigation }) {
     return (
         <View style={styles.container}>
+
             <Image
-                source={require('../../assets/images/splashart.png')}
+                source={require('../../assets/images/splashscreen.png')}
                 style={styles.imageScreen}
                 resizeMode="contain"
             />
@@ -25,7 +26,7 @@ export default function WelcomeScreen({ navigation }) {
                     type='primary'
                 />
                 <Button
-                    onPress={() => navigation.navigate('Login')} 
+                    onPress={() => navigation.navigate('Login', { mode: 'login' })} 
                     title="Já possuo conta" 
                     type='secondary'
                 />
@@ -40,16 +41,17 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 18,
     },
     imageScreen: {
         width: 600, 
+        width: "100%",
         height: "45%",
     },
     content: {
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
+        paddingHorizontal: 18,
         paddingBottom: 25,
     },
     title: {

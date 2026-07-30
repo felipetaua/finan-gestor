@@ -10,6 +10,7 @@ import { PhoneAuthProvider, signInWithCredential } from "firebase/auth";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useOnboarding } from '../../hooks/useOnboarding';
 import { fetchCountriesApi } from '../../api/endpoints/countriesApi';
+import FirebaseRecaptchaVerifierModal from '../../components/auth/FirebaseRecaptchaVerifierModal';
 
 export default function PhoneAuthScreen({ navigation }) {
     const insets = useSafeAreaInsets();
@@ -46,40 +47,40 @@ export default function PhoneAuthScreen({ navigation }) {
                 console.log("Iniciando busca na REST Countries API...");
                 const data = await fetchCountriesApi();
                 
-                const priorityCodes = ['BR', 'PT', 'US', 'ES', 'GB', 'AO', 'MZ'];
-                
-                const formattedCountries = data
-                    .filter(item => item.idd && item.idd.root)
-                    .map(item => {
-                        const root = item.idd.root;
-                        const suffix = item.idd.suffixes && item.idd.suffixes.length === 1 ? item.idd.suffixes[0] : '';
-                        const ddi = `${root}${suffix}`;
-                        
-                        return {
-                            id: item.cca2,
-                            name: item.translations?.por?.common || item.name.common,
-                            code: ddi,
-                            flag: item.flags.png
-                        };
-                    })
-                    .filter(item => item.code.length > 1)
-                    .sort((a, b) => {
-                        const scoreA = priorityCodes.indexOf(a.id);
-                        const scoreB = priorityCodes.indexOf(b.id);
-                        
-                        // Se ambos estão na lista de prioridade, mantêm a ordem da lista
-                        if (scoreA !== -1 && scoreB !== -1) return scoreA - scoreB;
-                        // Se apenas A está na prioridade, ele sobe
-                        if (scoreA !== -1) return -1;
-                        // Se apenas B está na prioridade, ele sobe
-                        if (scoreB !== -1) return 1;
-                        // Caso contrário, ordem alfabética
-                        return a.name.localeCompare(b.name);
-                    });
-                
-                setCountryData(formattedCountries);
+                if (data && Array.isArray(data)) {
+                    const priorityCodes = ['BR', 'PT', 'US', 'ES', 'GB', 'AO', 'MZ'];
+                    
+                    const formattedCountries = data
+                        .filter(item => item.idd && item.idd.root)
+                        .map(item => {
+                            const root = item.idd.root;
+                            const suffix = item.idd.suffixes && item.idd.suffixes.length === 1 ? item.idd.suffixes[0] : '';
+                            const ddi = `${root}${suffix}`;
+                            
+                            return {
+                                id: item.cca2,
+                                name: item.translations?.por?.common || item.name.common,
+                                code: ddi,
+                                flag: item.flags.png
+                            };
+                        })
+                        .filter(item => item.code.length > 1)
+                        .sort((a, b) => {
+                            const scoreA = priorityCodes.indexOf(a.id);
+                            const scoreB = priorityCodes.indexOf(b.id);
+                            
+                            if (scoreA !== -1 && scoreB !== -1) return scoreA - scoreB;
+                            if (scoreA !== -1) return -1;
+                            if (scoreB !== -1) return 1;
+                            return a.name.localeCompare(b.name);
+                        });
+                    
+                    setCountryData(formattedCountries);
+                    console.log("REST Countries carregada com sucesso.");
+                } else {
+                    console.warn("REST Countries API não retornou uma lista válida. Mantendo lista de países padrão.");
+                }
                 setLoadingCountries(false);
-                console.log("REST Countries carregada com sucesso.");
             } catch (error) {
                 console.error("Erro ao carregar REST Countries API:", error);
                 setLoadingCountries(false);
@@ -152,10 +153,8 @@ export default function PhoneAuthScreen({ navigation }) {
             const phoneProvider = new PhoneAuthProvider(auth);
             const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/\D/g, '')}`;
             
-            // O componente recaptchaVerifier foi removido porque expo-firebase-recaptcha é obsoleto (unblock build)
-            // Para consertar, migre para @react-native-firebase/auth no seu projeto Expo.
             if (!recaptchaVerifier.current) {
-                Alert.alert("Erro Técnico", "O Verificador de reCAPTCHA não está pronto. No SDK 50+, use React Native Firebase para login por telefone.");
+                Alert.alert("Erro de Sistema", "O Verificador de segurança reCAPTCHA não pôde ser inicializado. Reinicie o aplicativo.");
                 setLoading(false);
                 return;
             }
@@ -174,6 +173,8 @@ export default function PhoneAuthScreen({ navigation }) {
                 errorMessage = "Erro de rede. Verifique se o seu celular tem internet e se as chaves do Firebase estão corretas.";
             } else if (err.code === 'auth/invalid-phone-number') {
                 errorMessage = "Número de telefone inválido. Verifique o formato.";
+            } else if (err.code === 'auth/billing-not-enabled') {
+                errorMessage = "O envio de SMS exige o plano Blaze (faturamento ativo) no Firebase. Para testar gratuitamente em desenvolvimento, adicione seu número de telefone e um código fixo nas configurações de números de teste no Console do Firebase (Authentication > Sign-in method > Phone).";
             }
             Alert.alert("Erro", `Não foi possível enviar o código: ${errorMessage}`);
         } finally {
@@ -292,18 +293,12 @@ export default function PhoneAuthScreen({ navigation }) {
                     )}
                 </View>
 
-                {/* 
-                  O componente FirebaseRecaptchaVerifierModal foi removido por ser obsoleto 
-                  no SDK 48+. Para usar Phone Auth no Expo moderno, recomendo migrar para
-                  @react-native-firebase/auth ou usar um sistema customizado de WebView.
-                */}
-                {/* {Platform.OS !== 'web' && (
+                {Platform.OS !== 'web' && (
                     <FirebaseRecaptchaVerifierModal
                         ref={recaptchaVerifier}
                         firebaseConfig={auth.app.options}
-                        attemptInvisibleVerification={true}
                     />
-                )} */}
+                )}
 
                 <Modal
                     visible={isCountryModalVisible}

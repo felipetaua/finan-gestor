@@ -4,6 +4,7 @@ import { theme } from '../../theme/theme';
 import Button from '../../components/common/Button';
 import OnboardingHeader from '../../components/common/OnboardingHeader';
 import { useOnboarding } from '../../hooks/useOnboarding';
+import SpeechBubble from '../../components/common/SpeechBubble';
 
 export default function StepScreen2({ navigation }) {
     const { updateOnboardingData } = useOnboarding();
@@ -25,7 +26,7 @@ export default function StepScreen2({ navigation }) {
                     source={require('../../assets/images/fin-2.png')}
                     style={styles.imageScreen}
                 />
-                <Text>Vamos começar a sua mudança - StepScreen2</Text>
+                <SpeechBubble>Vamos começar a sua mudança!</SpeechBubble>
             </View>
             <View style={styles.footer}>
                 <Button  

@@ -3,17 +3,17 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 
-const SectionBanner = ({ section = 1, unit = 1, description = '' }) => {
+const SectionBanner = ({ section = 1, unit = 1, description = '', onPress }) => {
     return (
-        <View style={styles.banner}>
+        <TouchableOpacity style={styles.banner} activeOpacity={0.9} onPress={onPress}>
             <View style={styles.bannerContent}>
                 <Text style={styles.sectionTitle}>SEÇÃO {section}, UNIDADE {unit}</Text>
                 <Text style={styles.unitDescription}>{description}</Text>
             </View>
-            <TouchableOpacity style={styles.notesButton}>
+            <View style={styles.notesButton}>
                 <MaterialCommunityIcons name="notebook-outline" size={24} color="white" />
-            </TouchableOpacity>
-        </View>
+            </View>
+        </TouchableOpacity>
     );
 };
 

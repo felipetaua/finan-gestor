@@ -6,35 +6,64 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { auth, db, app } from '../../services/firebaseConfig';
-import { 
-    useCreateUserWithEmailAndPassword, 
-    useSignInWithEmailAndPassword 
+import {
+    useCreateUserWithEmailAndPassword,
+    useSignInWithEmailAndPassword
 } from "react-firebase-hooks/auth";
-import { 
-    updateProfile, 
-    GoogleAuthProvider, 
+import {
+    updateProfile,
+    GoogleAuthProvider,
     signInWithCredential,
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useOnboarding } from '../../hooks/useOnboarding';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import { makeRedirectUri } from 'expo-auth-session';
 import { fetchGoogleUserInfo } from '../../api/endpoints/authApi';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
     const { onboardingData } = useOnboarding();
-    const [isLogin, setIsLogin] = useState(true);
+    const [isLogin, setIsLogin] = useState(() => {
+        if (route.params?.mode === 'signup') {
+            return false;
+        }
+        return true;
+    });
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    // Selecionar o client ID correto baseado na plataforma
+    // Estados de validação local e feedback visual
+    const [nameError, setNameError] = useState(false);
+    const [emailError, setEmailError] = useState(false);
+    const [passwordError, setPasswordError] = useState(false);
+    const [validationMessage, setValidationMessage] = useState('');
+
+    useEffect(() => {
+        if (route.params?.mode === 'signup') {
+            setIsLogin(false);
+        } else if (route.params?.mode === 'login') {
+            setIsLogin(true);
+        }
+    }, [route.params?.mode]);
+
+
+    // Detecta se está rodando no aplicativo Expo Go
+    const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+    // Selecionar o client ID correto baseado na plataforma e no ambiente (Expo Go vs APK Nativo)
     const getClientId = () => {
+        if (isExpoGo) {
+            // No Expo Go, precisamos usar obrigatoriamente o Web Client ID para todas as plataformas
+            return process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+        }
         if (Platform.OS === 'web') {
             return process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
         } else if (Platform.OS === 'android') {
@@ -43,14 +72,23 @@ export default function LoginScreen({ navigation }) {
         return process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     };
 
-    const [request, response, promptAsync] = Google.useAuthRequest({
-        clientId: getClientId(),
-        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-        redirectUri: makeRedirectUri({
-            useProxy: true,
-        }),
-    });
+    const [request, response, promptAsync] = Google.useAuthRequest(
+        {
+            clientId: getClientId(),
+            // IMPORTANTE: Evitamos passar androidClientId no Expo Go.
+            // Se passarmos, a biblioteca expo-auth-session ignora o clientId e força o ID Android nativo,
+            // o que causa rejeição do Google por incompatibilidade de pacote (Expo Go vs com.example.finan).
+            androidClientId: isExpoGo ? undefined : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+            webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+            // No Expo Go, usamos a string direta para que o Google receba a URL HTTPS correta.
+            // No APK final (APK), usamos o makeRedirectUri tradicional com o esquema finan:// nativo.
+            redirectUri: isExpoGo 
+                ? 'https://auth.expo.io/@felipetaua/FINAN' 
+                : makeRedirectUri({ scheme: 'com.example.finan' }),
+        },
+        // Segundo argumento: Opções do provedor de autenticação (necessário para o Proxy funcionar no Expo Go)
+        isExpoGo ? { useProxy: true, projectNameForProxy: '@felipetaua/FINAN' } : undefined
+    );
 
     useEffect(() => {
         if (request) {
@@ -66,10 +104,10 @@ export default function LoginScreen({ navigation }) {
         if (response?.type === 'success') {
             const { authentication } = response;
             const accessToken = authentication?.accessToken;
-            
+
             console.log("Login Google sucesso!");
             console.log("Access Token recebido:", !!accessToken);
-            
+
             if (accessToken) {
                 // Usar o accessToken para obter informações do usuário do Google
                 fetchGoogleUserInfoHandler(accessToken);
@@ -85,17 +123,128 @@ export default function LoginScreen({ navigation }) {
         }
     }, [response]);
 
-    const fetchGoogleUserInfoHandler = async (accessToken) => {
+    const fetchGoogleUserInfoHandler = async (token) => {
         try {
-            const data = await fetchGoogleUserInfo(accessToken);
-            console.log("Dados do usuário Google:", data);
-            
-            // Usar o accessToken para criar credential Firebase
-            const credential = GoogleAuthProvider.credential(null, accessToken);
-            handleFirebaseSocialLogin(credential, 'google');
+            const userInfo = await fetchGoogleUserInfo(token);
+            console.log("Informações do usuário obtidas com sucesso do Google!");
+            await handleFirebaseSocialLogin('google', userInfo, token);
         } catch (error) {
-            console.error("Erro ao buscar informações do usuário:", error);
-            Alert.alert("Erro", "Não foi possível obter informações da conta Google.");
+            console.error("Erro ao obter dados do usuário do Google:", error);
+            Alert.alert("Erro", "Não foi possível obter os dados do seu perfil do Google.");
+        }
+    };
+
+    const handleFirebaseSocialLogin = async (type, userInfo, token) => {
+        try {
+            const email = userInfo.email;
+            const name = userInfo.name;
+            const photoUrl = userInfo.picture;
+            const providerId = userInfo.id;
+
+            // Criar credencial de autenticação do Firebase
+            // Usamos o idToken (do prompt nativo) ou o accessToken (do fluxo manual do Expo Go)
+            const firebaseToken = response?.authentication?.idToken || token;
+            if (!firebaseToken) {
+                throw new Error("Nenhum token válido do Google foi fornecido.");
+            }
+            
+            const credentialGoogle = GoogleAuthProvider.credential(null, firebaseToken);
+            const userCredential = await signInWithCredential(auth, credentialGoogle);
+            const user = userCredential.user;
+
+            console.log("Firebase login social efetuado:", user.uid);
+
+            // Verificar se o documento do usuário já existe no Firestore
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (!userDocSnap.exists()) {
+                console.log("Criando novo documento do usuário pós login social...");
+                // Se for novo usuário, salvar os dados iniciais
+                await setDoc(userDocRef, {
+                    name: name || user.displayName || 'Usuário Finan',
+                    email: email || user.email,
+                    photoUrl: photoUrl || user.photoURL || '',
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                    isPremium: false,
+                    onboardingCompleted: false
+                });
+            }
+        } catch (error) {
+            console.error(`Erro no login com ${type}:`, error);
+            Alert.alert("Erro", "Ocorreu um problema ao vincular sua conta.");
+        }
+    };
+
+    // Helper para extrair credenciais corretas do Firebase
+    const tokenGoogleFix = (userInfo, resp) => {
+        // Se viemos do AuthSession, usamos o idToken ou a credencial implícita
+        return resp?.authentication?.idToken || resp?.authentication?.accessToken;
+    };
+
+    const handleSocialLogin = async (type) => {
+        console.log("handleSocialLogin chamado com tipo:", type);
+        if (type === 'google') {
+            try {
+                if (isExpoGo) {
+                    console.log("Iniciando login Google no Expo Go via fluxo manual de proxy...");
+                    
+                    // 1. URL de retorno local (Ex: exp://192.168.x.x:8081/--/expo-auth-session)
+                    const localReturnUrl = makeRedirectUri({
+                        scheme: 'finan',
+                    });
+                    console.log("Local Return URL:", localReturnUrl);
+                    
+                    // 2. URL de autorização do Google apontando para o proxy como redirect_uri
+                    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                        `client_id=${process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}` +
+                        `&redirect_uri=${encodeURIComponent('https://auth.expo.io/@felipetaua/FINAN')}` +
+                        `&response_type=token` +
+                        `&scope=${encodeURIComponent('profile email')}`;
+                    
+                    // 3. URL de início do proxy que registra o returnUrl local e joga para o Google
+                    const proxyStartUrl = `https://auth.expo.io/@felipetaua/FINAN/start?` +
+                        `authUrl=${encodeURIComponent(googleAuthUrl)}` +
+                        `&returnUrl=${encodeURIComponent(localReturnUrl)}`;
+                    
+                    console.log("Abrindo navegador com proxyStartUrl...");
+                    const result = await WebBrowser.openAuthSessionAsync(proxyStartUrl, localReturnUrl);
+                    console.log("Resultado do navegador:", result.type);
+                    
+                    if (result.type === 'success' && result.url) {
+                        // Extrai os parâmetros retornados na URL (access_token)
+                        const params = {};
+                        const hashOrSearch = result.url.includes('#') ? result.url.split('#')[1] : (result.url.includes('?') ? result.url.split('?')[1] : '');
+                        if (hashOrSearch) {
+                            const parts = hashOrSearch.split('&');
+                            for (const part of parts) {
+                                const [key, value] = part.split('=');
+                                if (key && value) {
+                                    params[key] = decodeURIComponent(value);
+                                }
+                            }
+                        }
+                        
+                        const accessToken = params.access_token;
+                        if (accessToken) {
+                            console.log("Token obtido via proxy manual!");
+                            fetchGoogleUserInfoHandler(accessToken);
+                        } else {
+                            Alert.alert("Erro", "Não foi possível extrair o token do Google.");
+                        }
+                    }
+                } else {
+                    console.log("Iniciando promptAsync do Google nativo...");
+                    const result = await promptAsync();
+                    console.log("Resultado promptAsync Google:", result?.type);
+                }
+            } catch (error) {
+                console.error("Erro ao abrir login do Google:", error);
+                Alert.alert("Erro", "Não foi possível abrir o login do Google.");
+            }
+        } else if (type === 'phone') {
+            navigation.navigate('PhoneAuth');
         }
     };
 
@@ -113,17 +262,46 @@ export default function LoginScreen({ navigation }) {
         errorSignIn,
     ] = useSignInWithEmailAndPassword(auth);
 
+    // Monitora erros do Firebase e destaca os campos correspondentes
+    useEffect(() => {
+        const error = isLogin ? errorSignIn : errorCreate;
+        if (error) {
+            const code = error.code || '';
+            if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+                setPasswordError(true);
+            } else if (code === 'auth/user-not-found' || code === 'auth/invalid-email' || code === 'auth/email-already-in-use') {
+                setEmailError(true);
+            } else if (code === 'auth/weak-password') {
+                setPasswordError(true);
+            }
+        }
+    }, [errorSignIn, errorCreate, isLogin]);
+
     const handleContinue = async () => {
         console.log("handleContinue chamado. isLogin:", isLogin);
-        if (!email || !password) {
-            console.log("Email ou senha vazios");
-            Alert.alert("Erro", "Por favor, preencha email e senha.");
-            return;
+        
+        setNameError(false);
+        setEmailError(false);
+        setPasswordError(false);
+        setValidationMessage('');
+
+        let hasFailed = false;
+
+        if (!email) {
+            setEmailError(true);
+            hasFailed = true;
+        }
+        if (!password) {
+            setPasswordError(true);
+            hasFailed = true;
+        }
+        if (!isLogin && !name) {
+            setNameError(true);
+            hasFailed = true;
         }
 
-        if (!isLogin && !name) {
-            console.log("Nome vazio no cadastro");
-            Alert.alert("Erro", "Por favor, preencha seu nome.");
+        if (hasFailed) {
+            setValidationMessage('Por favor, preencha todos os campos obrigatórios.');
             return;
         }
 
@@ -132,11 +310,11 @@ export default function LoginScreen({ navigation }) {
                 console.log("Tentando criar usuário com email:", email);
                 const result = await createUserWithEmailAndPassword(email, password);
                 console.log("Resultado createUser:", result ? "Objeto recebido" : "Undefined/Null");
-                
+
                 if (result && result.user) {
                     console.log("Usuário criado. Atualizando perfil com nome:", name);
                     await updateProfile(result.user, { displayName: name });
-                    
+
                     console.log("Perfil atualizado. Salvando no Firestore...");
                     const userRef = doc(db, "users", result.user.uid);
                     await setDoc(userRef, {
@@ -145,6 +323,10 @@ export default function LoginScreen({ navigation }) {
                         onboarding: onboardingData || {},
                         plan: 'Gratuito',
                         xp: 0,
+                        xpDiario: 0,
+                        xpMensal: 0,
+                        lastResetDiario: "",
+                        lastResetMensal: "",
                         level: 1,
                         createdAt: serverTimestamp()
                     });
@@ -163,48 +345,6 @@ export default function LoginScreen({ navigation }) {
         } catch (error) {
             console.error("Erro no handleContinue:", error);
             Alert.alert("Erro de Autenticação", error.message || "Não foi possível realizar a operação.");
-        }
-    };
-
-    const handleFirebaseSocialLogin = async (credential, type) => {
-        try {
-            const result = await signInWithCredential(auth, credential);
-            if (result.user) {
-                const userRef = doc(db, "users", result.user.uid);
-                const userSnap = await getDoc(userRef);
-
-                if (!userSnap.exists()) {
-                    await setDoc(userRef, {
-                        name: result.user.displayName,
-                        email: result.user.email,
-                        onboarding: onboardingData,
-                        plan: 'Gratuito',
-                        xp: 0,
-                        level: 1,
-                        createdAt: serverTimestamp(),
-                        provider: type
-                    });
-                }
-            }
-        } catch (error) {
-            console.error(`Erro no login com ${type}:`, error);
-            Alert.alert("Erro", "Ocorreu um problema ao vincular sua conta.");
-        }
-    };
-
-    const handleSocialLogin = async (type) => {
-        console.log("handleSocialLogin chamado com tipo:", type);
-        if (type === 'google') {
-            try {
-                console.log("Iniciando promptAsync do Google...");
-                const result = await promptAsync();
-                console.log("Resultado promptAsync Google:", result?.type);
-            } catch (error) {
-                console.error("Erro ao abrir prompt do Google:", error);
-                Alert.alert("Erro", "Não foi possível abrir o login do Google.");
-            }
-        } else if (type === 'phone') {
-            navigation.navigate('PhoneAuth');
         }
     };
 
@@ -247,14 +387,14 @@ export default function LoginScreen({ navigation }) {
                 </View>
 
                 <View style={styles.toggleWrapper}>
-                    <TouchableOpacity 
-                        style={[styles.toggleBtn, isLogin && styles.toggleBtnActive]} 
+                    <TouchableOpacity
+                        style={[styles.toggleBtn, isLogin && styles.toggleBtnActive]}
                         onPress={() => setIsLogin(true)}
                     >
                         <Text style={[styles.toggleBtnText, isLogin && styles.toggleBtnTextActive]}>Login</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[styles.toggleBtn, !isLogin && styles.toggleBtnActive]} 
+                    <TouchableOpacity
+                        style={[styles.toggleBtn, !isLogin && styles.toggleBtnActive]}
                         onPress={() => setIsLogin(false)}
                     >
                         <Text style={[styles.toggleBtnText, !isLogin && styles.toggleBtnTextActive]}>Criar conta</Text>
@@ -266,20 +406,23 @@ export default function LoginScreen({ navigation }) {
                         <Input
                             placeholder="Nome Completo"
                             value={name}
-                            onChangeText={setName}
+                            onChangeText={(txt) => { setName(txt); setNameError(false); setValidationMessage(''); }}
+                            hasError={nameError}
                         />
                     )}
                     <Input
                         placeholder="Email"
                         value={email}
-                        onChangeText={setEmail}
+                        onChangeText={(txt) => { setEmail(txt); setEmailError(false); setValidationMessage(''); }}
                         keyboardType="email-address"
+                        hasError={emailError}
                     />
                     <Input
                         placeholder="Senha"
                         value={password}
-                        onChangeText={setPassword}
+                        onChangeText={(txt) => { setPassword(txt); setPasswordError(false); setValidationMessage(''); }}
                         secureTextEntry={!showPassword}
+                        hasError={passwordError}
                         rightIcon={
                             <Ionicons
                                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -290,7 +433,9 @@ export default function LoginScreen({ navigation }) {
                         onRightIconPress={() => setShowPassword((prev) => !prev)}
                     />
 
-                    {errorCreate || errorSignIn ? (
+                    {validationMessage ? (
+                        <Text style={styles.errorText}>{validationMessage}</Text>
+                    ) : (errorCreate || errorSignIn) ? (
                         <Text style={styles.errorText}>
                             {getAuthErrorMessage()}
                         </Text>

@@ -7,6 +7,7 @@ import { theme } from '../../theme/theme';
 import HomeHeader from '../../components/home/HomeHeader';
 import SectionBanner from '../../components/home/SectionBanner';
 import TrailNode from '../../components/home/TrailNode';
+import OnboardingModal from '../../components/home/OnboardingModal';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, auth } from '../../services/firebaseConfig';
 const trailDataRaw = require('./test.json');
@@ -17,12 +18,21 @@ const HomeScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const animation = React.useRef(null);
+    const scrollViewRef = React.useRef(null);
     const [streak, setStreak] = useState(0);
     const [coins, setCoins] = useState(0);
     const [hearts, setHearts] = useState(6);
     const [isPremium, setIsPremium] = useState(false);
     const [nextEnergyTimeStr, setNextEnergyTimeStr] = useState("30:00");
     const [completedUnitIds, setCompletedUnitIds] = useState([]);
+    const [isOnboardingVisible, setIsOnboardingVisible] = useState(true);
+
+    // Rola para o final da lista (onde a trilha começa) ao montar a tela
+    useEffect(() => {
+        setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: false });
+        }, 400);
+    }, []);
 
     const sectionsData = useMemo(() => {
         const completedSet = new Set(completedUnitIds);
@@ -105,12 +115,19 @@ const HomeScreen = () => {
             const data = docSnap.data();
             const ids = Array.isArray(data.completedUnitIds) ? data.completedUnitIds : [];
             setCompletedUnitIds(ids);
+            
+            // Ativa o tutorial se o usuário nunca o viu
+            if (data.hasSeenOnboarding !== true) {
+                setIsOnboardingVisible(true);
+            }
         } else {
             await setDoc(trailProgressRef, {
                 completedUnitIds: [],
+                hasSeenOnboarding: false,
                 updatedAt: new Date().toISOString()
             });
             setCompletedUnitIds([]);
+            setIsOnboardingVisible(true);
         }
     });
 
@@ -192,7 +209,39 @@ const HomeScreen = () => {
             return;
         }
 
+        if (selectedNode.status === 'completed') {
+            const charCodeSum = selectedNode.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+            const starCount = (charCodeSum % 2) + 2; // 2 ou 3 estrelas determinísticas
+            
+            Alert.alert(
+                'Unidade Concluída!',
+                `Você concluiu esta unidade com sucesso.\nPontuação obtida: ${'⭐'.repeat(starCount)} (${starCount}/3 Estrelas)\n\nDeseja refazer a lição para praticar e fixar o conhecimento?`,
+                [
+                    { text: 'Agora não', style: 'cancel' },
+                    { text: 'Praticar (+10 XP)', onPress: () => navigation.navigate('Lesson', { lessonData: selectedNode.lessonData }) }
+                ]
+            );
+            return;
+        }
+
         navigation.navigate('Lesson', { lessonData: selectedNode.lessonData });
+    };
+
+    const handleCloseOnboarding = async () => {
+        setIsOnboardingVisible(false);
+        const user = auth.currentUser;
+        if (!user) return;
+        
+        try {
+            const { updateDoc } = await import('firebase/firestore');
+            const trailProgressRef = doc(db, 'users', user.uid, 'gamification', 'trailProgress');
+            await updateDoc(trailProgressRef, {
+                hasSeenOnboarding: true,
+                updatedAt: new Date().toISOString()
+            });
+        } catch (err) {
+            console.log("Error updating onboarding status:", err);
+        }
     };
 
 
@@ -206,38 +255,86 @@ const HomeScreen = () => {
             nextEnergyTime={nextEnergyTimeStr} 
         />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {sectionsData.map((section, index) => {
-                const isFirstGroup = index === 0;
+        <ScrollView 
+            ref={scrollViewRef}
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.scrollContent}
+        >
+            {[...sectionsData].reverse().map((section) => {
+                const originalSectionIndex = sectionsData.findIndex(s => s.id === section.id);
+                const isFirstSection = originalSectionIndex === 0;
 
                 return (
                     <View key={`section-${section.id}`}>
                         <SectionBanner
-                            section={index + 1}
+                            section={originalSectionIndex + 1}
                             unit={section.unidades.length}
                             description={section.titulo}
+                            onPress={() => {
+                                const cleanTitle = section.titulo.includes(': ') 
+                                    ? section.titulo.split(': ')[1] 
+                                    : section.titulo;
+                                const sectionBanner = {
+                                    id: `section-${section.id}`,
+                                    title: `Seção ${originalSectionIndex + 1}: ${cleanTitle}`,
+                                    subtitle: `${section.unidades.length} Unidades de aprendizado`,
+                                    color: originalSectionIndex % 3 === 0 ? '#1CB0F6' : (originalSectionIndex % 3 === 1 ? '#22C55E' : '#FF9600'),
+                                    detail: {
+                                        heading: section.titulo,
+                                        body: [
+                                            {
+                                                type: 'paragraph',
+                                                text: `Bem-vindo à Seção ${originalSectionIndex + 1} da sua trilha de aprendizado financeiro. Esta seção aborda conceitos fundamentais sobre planejamento, economia, e atitudes práticas para alavancar suas conquistas financeiras.`
+                                            },
+                                            ...section.unidades.map((u, ui) => ({
+                                                type: 'section',
+                                                title: `Unidade ${ui + 1}: ${u.titulo}`,
+                                                text: `Complete as lições e atividades desta unidade para avançar no seu aprendizado, subir de nível no ranking e acumular recompensas!`
+                                            })),
+                                            {
+                                                type: 'tip',
+                                                label: 'Dica Prática',
+                                                text: 'Dê um passo de cada vez. A consistência diária é muito mais valiosa do que estudar horas acumuladas uma única vez!'
+                                            }
+                                        ]
+                                    }
+                                };
+                                navigation.navigate('BannerDetail', { banner: sectionBanner });
+                            }}
                         />
                         <View style={styles.trailContainer}>
-                            {isFirstGroup && (
+                            {(() => {
+                                const reversedUnits = [...section.unidades].reverse();
+                                return reversedUnits.map((node, nodeIndex) => {
+                                    const nextNode = nodeIndex > 0 ? reversedUnits[nodeIndex - 1] : null;
+                                    return (
+                                        <TrailNode 
+                                            key={node.id} 
+                                            node={node} 
+                                            nextNode={nextNode}
+                                            onPress={handleNodePress}
+                                        />
+                                    );
+                                });
+                            })()}
+                            {isFirstSection && (
                                 <LottieView
                                     autoPlay
                                     loop={true}
-                                    style={{ width: 150, height: 150 }}
+                                    style={{ width: 150, height: 150, marginTop: 10 }}
                                     source={require('../../assets/lottie/loading-coin.json')}
                                 />
                             )}
-                            {section.unidades.map(node => (
-                                <TrailNode 
-                                    key={node.id} 
-                                    node={node} 
-                                    onPress={handleNodePress}
-                                />
-                            ))}
                         </View>
                     </View>
                 );
             })}
             </ScrollView>
+
+            <OnboardingModal 
+                visible={isOnboardingVisible} 
+                onClose={handleCloseOnboarding} 
+            />
         </View>
     );
 };
