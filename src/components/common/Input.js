@@ -10,9 +10,10 @@ const Input = ({
     keyboardType,
     rightIcon,
     onRightIconPress,
+    hasError,
 }) => {
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, hasError ? styles.containerError : null]}>
             <TextInput
                 style={[styles.input, rightIcon ? styles.inputWithIcon : null]}
                 placeholder={placeholder}
@@ -45,6 +46,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         marginBottom: 16,
         justifyContent: 'center',
+    },
+    containerError: {
+        borderWidth: 1.5,
+        borderColor: '#EF4444',
+        backgroundColor: '#FEF2F2',
     },
     input: {
         fontSize: theme.fontSizes.md,

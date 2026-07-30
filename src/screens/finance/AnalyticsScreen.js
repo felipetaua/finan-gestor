@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Platform, Dimensions, Modal } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { theme } from '../../theme/theme';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle, G } from 'react-native-svg';
@@ -77,11 +78,15 @@ const AnalyticsScreen = () => {
     const user = auth.currentUser;
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
+    const route = useRoute();
+    const { activeAccount = 'Pessoal' } = route.params || {};
     const { formatCurrency } = useCurrency();
     
     const [currentDate, setCurrentDate] = useState(new Date());
     const [transactions, setTransactions] = useState([]);
     const [chartData, setChartData] = useState([]);
+    const [historyData, setHistoryData] = useState([]);
+    const [selectedBarIndex, setSelectedBarIndex] = useState(6); // Default para o mês atual (último item)
     const [totalExpenses, setTotalExpenses] = useState(0);
     const [totalIncome, setTotalIncome] = useState(0);
     const [savingsTotal, setSavingsTotal] = useState(0);
@@ -99,12 +104,25 @@ const AnalyticsScreen = () => {
     ];
 
     useEffect(() => {
+        const markVisited = async () => {
+            try {
+                const todayStr = new Date().toISOString().split('T')[0];
+                await AsyncStorage.setItem('@analytics_visited_today', todayStr);
+            } catch (e) {
+                console.error("Erro ao salvar visita ao analytics:", e);
+            }
+        };
+        markVisited();
+    }, []);
+
+    useEffect(() => {
         if (!user) return;
 
         // Definir intervalo conforme período selecionado
         const startDate = viewPeriod === 'anual'
             ? new Date(currentDate.getFullYear(), 0, 1)
             : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+
         const endDate = viewPeriod === 'anual'
             ? new Date(currentDate.getFullYear(), 11, 31, 23, 59, 59)
             : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
@@ -119,6 +137,54 @@ const AnalyticsScreen = () => {
                 id: doc.id,
                 ...doc.data()
             })).filter(item => !(item?.isDeleted === true || item?.isDeleted === 'true' || item?.deletedAt != null));
+
+            // Filtrar pelo contexto de conta ativo (Pessoal / PJ)
+            const targetAccount = (activeAccount || 'Pessoal').toLowerCase();
+            allTrans = allTrans.filter(t => {
+                const accType = (t.accountType || 'Pessoal').toLowerCase();
+                return accType === targetAccount;
+            });
+
+            // Agrupar histórico dos últimos 7 meses para o gráfico de evolução
+            const getLast7Months = () => {
+                const list = [];
+                const today = new Date();
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                    list.push({
+                        year: d.getFullYear(),
+                        month: d.getMonth(),
+                        label: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').substring(0, 3).toLowerCase(),
+                        income: 0,
+                        expense: 0,
+                        savings: 0
+                    });
+                }
+                return list;
+            };
+
+            const history = getLast7Months();
+            allTrans.forEach(t => {
+                if (!t.date) return;
+                const d = new Date(t.date.seconds * 1000);
+                const tYear = d.getFullYear();
+                const tMonth = d.getMonth();
+                
+                const idx = history.findIndex(m => m.year === tYear && m.month === tMonth);
+                if (idx !== -1) {
+                    if (t.type === 'income') {
+                        history[idx].income += t.amount;
+                    } else if (t.type === 'expense') {
+                        history[idx].expense += t.amount;
+                    }
+                }
+            });
+            
+            history.forEach(m => {
+                m.savings = m.income - m.expense;
+            });
+            
+            setHistoryData(history);
 
             // Ordenação local (descendente)
             allTrans.sort((a, b) => {
@@ -336,6 +402,66 @@ const AnalyticsScreen = () => {
                         <Text style={styles.legendText}>{item.label}</Text>
                     </TouchableOpacity>
                 ))}
+                </View>
+
+                {/* Gráfico de Economia do Período (Estilo Vantage/Premium) */}
+                <View style={styles.savingsCard}>
+                    <Text style={styles.savingsLabel}>Economia</Text>
+                    {historyData && historyData.length > 0 && (() => {
+                        const selectedData = historyData[selectedBarIndex] || historyData[historyData.length - 1];
+                        const val = selectedData ? selectedData.savings : 0;
+                        const formatted = formatCurrency(Math.abs(val)); // e.g. "R$ 1.950,12"
+                        const parts = formatted.split(',');
+                        const integerPart = parts[0];
+                        const decimalPart = parts[1] || '00';
+                        const prefix = val < 0 ? '-' : '';
+                        
+                        return (
+                            <View style={styles.savingsValueRow}>
+                                <Text style={styles.savingsValuePrefix}>{prefix}</Text>
+                                <Text style={styles.savingsValueInteger}>{integerPart}</Text>
+                                <Text style={styles.savingsValueDecimal}>,{decimalPart}</Text>
+                            </View>
+                        );
+                    })()}
+                    
+                    <View style={styles.savingsDivider} />
+                    
+                    <View style={styles.savingsBarsContainer}>
+                        {historyData && historyData.map((item, index) => {
+                            // Encontrar o maior valor absoluto de economia para servir de escala base
+                            const maxSavings = Math.max(...historyData.map(h => Math.abs(h.savings)), 1);
+                            // Escalar de forma que o preenchimento fique proporcional
+                            const ratio = maxSavings > 0 ? (Math.abs(item.savings) / maxSavings) * 100 : 0;
+                            const fillHeight = Math.max(15, ratio); // mínimo de 15% para visibilidade/toque
+                            const isSelected = selectedBarIndex === index;
+                            const barColor = isSelected ? '#3b82f6' : '#93c5fd';
+                            
+                            return (
+                                <TouchableOpacity 
+                                    key={index} 
+                                    style={styles.savingsBarColumn}
+                                    onPress={() => setSelectedBarIndex(index)}
+                                    activeOpacity={0.8}
+                                >
+                                    <View style={styles.savingsBarWrapper}>
+                                        <View 
+                                            style={[
+                                                styles.savingsBarFill, 
+                                                { 
+                                                    backgroundColor: barColor, 
+                                                    height: `${fillHeight}%` 
+                                                }
+                                            ]} 
+                                        />
+                                    </View>
+                                    <Text style={[styles.savingsBarLabel, isSelected && styles.savingsBarLabelActive]}>
+                                        {item.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
                 </View>
 
                 <View style={styles.transactionsHeader}>
@@ -747,6 +873,91 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '700',
         color: '#374151',
+    },
+    // Estilos do Gráfico de Economia do Período (Estilo do Vantage)
+    savingsCard: {
+        backgroundColor: '#FFF',
+        borderRadius: 24,
+        padding: 20,
+        marginHorizontal: 20,
+        marginBottom: 25,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+            },
+            android: {
+                elevation: 2,
+            },
+        }),
+    },
+    savingsLabel: {
+        fontSize: 14,
+        color: '#94A3B8',
+        fontWeight: '500',
+        marginBottom: 6,
+    },
+    savingsValueRow: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+    },
+    savingsValuePrefix: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#0F172A',
+        marginRight: 2,
+    },
+    savingsValueInteger: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        color: '#0F172A',
+    },
+    savingsValueDecimal: {
+        fontSize: 18,
+        color: '#94A3B8',
+        fontWeight: '600',
+    },
+    savingsDivider: {
+        height: 1,
+        backgroundColor: '#F1F5F9',
+        marginVertical: 18,
+    },
+    savingsBarsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        height: 120,
+        alignItems: 'flex-end',
+    },
+    savingsBarColumn: {
+        alignItems: 'center',
+        flex: 1,
+    },
+    savingsBarWrapper: {
+        height: 80,
+        width: 22,
+        backgroundColor: '#F1F5F9',
+        borderRadius: 11,
+        overflow: 'hidden',
+        justifyContent: 'flex-end',
+    },
+    savingsBarFill: {
+        width: '100%',
+        borderRadius: 11,
+    },
+    savingsBarLabel: {
+        fontSize: 11,
+        fontWeight: '500',
+        color: '#94A3B8',
+        marginTop: 8,
+        textTransform: 'lowercase',
+    },
+    savingsBarLabelActive: {
+        color: '#3b82f6',
+        fontWeight: '700',
     },
 });
 

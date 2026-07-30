@@ -2,7 +2,7 @@
   "expo": {
     "name": "FINAN",
     "slug": "FINAN",
-    "scheme": "finan",
+    "scheme": ["finan", "com.example.finan"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

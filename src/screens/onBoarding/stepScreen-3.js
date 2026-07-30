@@ -5,6 +5,7 @@ import Button from '../../components/common/Button';
 import SelectableOption from '../../components/common/SelectableOption';
 import OnboardingHeader from '../../components/common/OnboardingHeader';
 import { useOnboarding } from '../../hooks/useOnboarding';
+import SpeechBubble from '../../components/common/SpeechBubble';
 
 export default function StepScreen3({ navigation }) {
     const { updateOnboardingData } = useOnboarding();
@@ -39,9 +40,10 @@ export default function StepScreen3({ navigation }) {
             />
             
             <View style={styles.content}>
-                <Text style={styles.title}>Como conheceu o Finan?</Text>
+                <SpeechBubble style={{ marginVertical: 10 }}>Como conheceu o Finan?</SpeechBubble>
                 
                 <ScrollView 
+
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
                 >

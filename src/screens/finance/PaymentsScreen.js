@@ -9,6 +9,7 @@ import {
     Alert,
     Modal,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -35,6 +36,18 @@ const PaymentsScreen = () => {
     const [sortBy, setSortBy] = useState('date'); // 'date' | 'value'
     const [hidePaidAuto, setHidePaidAuto] = useState(false);
     const [isOptionsVisible, setIsOptionsVisible] = useState(false);
+
+    useEffect(() => {
+        const markVisited = async () => {
+            try {
+                const todayStr = new Date().toISOString().split('T')[0];
+                await AsyncStorage.setItem('@payments_checked_today', todayStr);
+            } catch (e) {
+                console.error("Erro ao salvar visita aos pagamentos:", e);
+            }
+        };
+        markVisited();
+    }, []);
 
     useEffect(() => {
         if (!user) return;
@@ -430,6 +443,7 @@ const styles = StyleSheet.create({
     emptyHint: {
         fontSize: 13,
         color: '#94A3B8',
+        alignItems: 'center',
     },
     modalOverlay: {
         flex: 1,

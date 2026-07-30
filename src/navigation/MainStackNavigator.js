@@ -2,6 +2,7 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import BottomTabNavigator from './BottomTabNavigator';
 import LessonScreen from '../screens/home/LessonScreen';
+import BannerDetailScreen from '../screens/finance/BannerDetailScreen';
 
 const Stack = createStackNavigator();
 
@@ -10,6 +11,7 @@ const MainStackNavigator = () => {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Tabs" component={BottomTabNavigator} />
             <Stack.Screen name="Lesson" component={LessonScreen} />
+            <Stack.Screen name="BannerDetail" component={BannerDetailScreen} />
         </Stack.Navigator>
     );
 };

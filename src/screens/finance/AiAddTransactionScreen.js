@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Dimensions, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import { db, auth } from '../../services/firebaseConfig';
@@ -12,6 +12,8 @@ const { height } = Dimensions.get('window');
 const AiAddTransactionScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
+    const route = useRoute();
+    const { accountType = 'pessoal' } = route.params || {};
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -58,6 +60,7 @@ const AiAddTransactionScreen = () => {
                 userId: user.uid,
                 prompt: prompt.trim(),
                 status: 'pending',
+                accountType: accountType,
                 createdAt: serverTimestamp(),
             });
 
@@ -76,7 +79,7 @@ const AiAddTransactionScreen = () => {
     return (
         <KeyboardAvoidingView 
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
         >
             <TouchableOpacity 
                 style={styles.backdrop} 
